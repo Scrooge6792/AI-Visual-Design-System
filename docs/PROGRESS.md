@@ -18,6 +18,7 @@
 - macOS 项目根目录提供 `./avds` 命令入口，不再要求记忆 `.venv/bin/avds` 路径。
 - 安装说明要求 Agent 先询问是否配置全局 `avds`；获批后仅按系统配置用户级命令目录/PATH，并验证命令，不默认修改系统级 PATH。
 - 根目录 `./avds` 与全局 `avds` 已统一为精简用户快捷层，帮助只显示版本、serve、status 和 config show/get/set；完整业务命令保留在 `./bin/avds`。
+- 顶层帮助明确提示 `avds <command> -h`，配置帮助继续提示 `avds config <action> -h`；首次试用改为 config set → serve，不再要求 init。
 
 ## 必要检查
 

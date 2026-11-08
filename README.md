@@ -16,7 +16,7 @@ macOS，在取得源码后的项目目录执行：
 
 ```sh
 sh scripts/install.sh
-./bin/avds init --vault "$HOME/Pictures/MyVisualVault"
+./avds config set vault "$HOME/Pictures/MyVisualVault"
 ./bin/avds doctor
 ./avds config show
 ./avds serve --open
@@ -28,7 +28,7 @@ Windows 10/11，在 PowerShell 的项目目录执行（安装好包含 `py` 启�
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1
-.\.venv\Scripts\avds.exe init --vault "$env:USERPROFILE\Pictures\MyVisualVault"
+.\avds.cmd config set vault "$env:USERPROFILE\Pictures\MyVisualVault"
 .\.venv\Scripts\avds.exe doctor
 .\avds.cmd config show
 .\avds.cmd serve --open
@@ -51,7 +51,7 @@ Windows 使用系统 Windows PowerShell / System.Drawing 解码 PNG、JPEG，不
 
 `serve` 是唯一长期运行的进程，保持这个终端开启。Agent CLI 每次请求结束即退出；浏览器无需单独启动 WebUI 服务。默认不后台运行、不自动启动。安装脚本不会执行 `init` 或打开真实库。
 
-已有配置时 `init` 不覆盖；可编辑配置，或以 `--config 新路径` 初始化另一套配置。源码升级后重启同一服务即可。旧版用户应先由自己停止旧 Core / Reviewer，再让新版指向原 Vault；本次开发没有安装、更新、停止或迁移旧版运行实例。
+首次试用不需要执行 `init`：`config set vault` 保存用户选择，第一次 `serve` 会自动创建 Vault、SQLite 和必要目录。`init` 仅作为项目内维护命令保留。源码升级后重启同一服务即可。旧版用户应先由自己停止旧 Core / Reviewer，再让新版指向原 Vault；本次开发没有安装、更新、停止或迁移旧版运行实例。
 
 ## 配置与日常使用
 
@@ -84,7 +84,7 @@ Windows JSON 路径使用 `C:/Users/yourname/Pictures/VisualVault` 或双反斜�
 
 `config show` 打印配置文件位置以及 Vault、host、port、是否打开浏览器和视觉提供者；`config get` 查看单项，`config set` 一次只设置一个用户配置。端口冲突会报错，不偷偷更改端口。同一 Vault 仍只允许一个服务。服务在前台运行，回到服务终端按 `Control-C` 即可停止。
 
-`./avds -h` 与 `./avds --help` 只打印上述核心命令及一句话用途说明；全局命令配置完成后可省略 `./`。完整业务命令仍保留在项目目录的 `./bin/avds`，供 Agent 和维护操作使用。
+`./avds -h` 与 `./avds --help` 只打印上述核心命令及一句话用途说明，并在末尾提示如何继续查看参数：使用 `avds serve -h`、`avds status -h` 或 `avds config -h`。配置动作继续使用 `avds config show -h`、`get -h`、`set -h`。全局命令配置完成后可省略 `./`。完整业务命令仍保留在项目目录的 `./bin/avds`，供 Agent 和维护操作使用。
 
 ## Agent 与网页工作流
 

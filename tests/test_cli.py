@@ -23,14 +23,14 @@ class CliHelpTests(unittest.TestCase):
 
     def test_user_help_only_lists_common_commands(self):
         help_text = self.capture_help(user_main, ["--help"])
-        for expected in ("-h, --help", "--version", "serve", "status", "config"):
+        for expected in ("-h, --help", "--version", "serve", "status", "config", "查看某个命令的参数", "avds serve -h"):
             self.assertIn(expected, help_text)
         for internal in ("import.stage", "review.action", "--json-file"):
             self.assertNotIn(internal, help_text)
 
     def test_config_help_lists_show_get_and_set(self):
         help_text = self.capture_help(user_main, ["config", "--help"])
-        for expected in ("show", "get", "set", "打印或修改当前用户的应用配置"):
+        for expected in ("show", "get", "set", "打印或修改当前用户的应用配置", "avds config set -h"):
             self.assertIn(expected, help_text)
 
     def test_internal_help_and_server_share_full_command_catalog(self):

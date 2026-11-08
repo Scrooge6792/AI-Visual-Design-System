@@ -28,6 +28,13 @@ def _parser():
     parser = ChineseArgumentParser(
         prog="avds",
         description="启动 Visual Design System，并查看或修改当前用户配置。",
+        epilog=(
+            "查看某个命令的参数：\n"
+            "  avds serve -h\n"
+            "  avds status -h\n"
+            "  avds config -h"
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}", help="显示版本号后退出")
     commands = parser.add_subparsers(dest="command", metavar="COMMAND", required=True)
@@ -43,8 +50,18 @@ def _parser():
     commands.add_parser("status", help="查看当前服务状态、端口和 Vault。",
         description="查看当前服务状态、端口和 Vault。")
 
-    config = commands.add_parser("config", help="打印或修改当前用户的应用配置。",
-        description="打印或修改当前用户的应用配置。")
+    config = commands.add_parser(
+        "config",
+        help="打印或修改当前用户的应用配置。",
+        description="打印或修改当前用户的应用配置。",
+        epilog=(
+            "查看某个配置动作的参数：\n"
+            "  avds config show -h\n"
+            "  avds config get -h\n"
+            "  avds config set -h"
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     actions = config.add_subparsers(dest="config_action", metavar="ACTION", required=True)
     actions.add_parser("show", help="打印配置文件位置和全部生效配置。")
     get = actions.add_parser("get", help="打印指定配置项的当前值。")
