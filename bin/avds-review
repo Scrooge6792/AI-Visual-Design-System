@@ -1,0 +1,3 @@
+#!/bin/sh
+set -eu
+exec /usr/bin/open -n "$HOME/Applications/AVDS Reviewer.app"

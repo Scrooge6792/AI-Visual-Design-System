@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contract_version", "operation_id", "proposal_id", "revision", "operation", "source", "file_hash", "target_revision", "uncertainties", "changes"],
+  "properties": {
+    "contract_version": {"const": "1.0"},
+    "operation_id": {"type": "string", "minLength": 1},
+    "proposal_id": {"type": "string", "minLength": 1},
+    "revision": {"type": "integer", "minimum": 1},
+    "operation": {"enum": ["asset.create", "asset.update", "asset.archive"]},
+    "source": {"type": "object"},
+    "file_hash": {"type": "string", "pattern": "^sha256:[a-f0-9]{64}$"},
+    "target_revision": {"type": "integer", "minimum": 0},
+    "queue_item_id": {"type": "string", "minLength": 1},
+    "asset_id": {"type": "string", "minLength": 1},
+    "analysis_run_id": {"type": ["string", "null"]},
+    "concept_ids": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+    "candidate_concept_refs": {"type": "array", "uniqueItems": true, "items": {"type": "object"}},
+    "uncertainties": {"type": "array", "items": {"type": "string"}},
+    "changes": {"type": "object"}
+  },
+  "oneOf": [
+    {"required": ["queue_item_id", "concept_ids", "candidate_concept_refs"], "properties": {"operation": {"const": "asset.create"}, "target_revision": {"const": 0}}, "not": {"required": ["asset_id"]}},
+    {"required": ["asset_id", "concept_ids", "candidate_concept_refs"], "properties": {"operation": {"const": "asset.update"}, "target_revision": {"type": "integer", "minimum": 1}}, "not": {"required": ["queue_item_id"]}},
+    {"required": ["asset_id"], "properties": {"operation": {"const": "asset.archive"}, "target_revision": {"type": "integer", "minimum": 1}}, "not": {"required": ["queue_item_id"]}}
+  ]
+}

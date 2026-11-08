@@ -1,0 +1,5 @@
+.DS_Store
+.build/
+.playwright-cli/
+__pycache__/
+*.py[cod]

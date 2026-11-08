@@ -1,0 +1,10 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":false,
+  "required":["contract_version","operation_id","proposal_id","revision","operation","target_id","target_revision","source","uncertainties","changes"],
+  "properties":{
+    "contract_version":{"const":"1.0"},"operation_id":{"type":"string","minLength":1},"proposal_id":{"type":"string","minLength":1},
+    "revision":{"type":"integer","minimum":1},"operation":{"enum":["knowledge.create","knowledge.update","knowledge.archive","prompt.create","prompt.update","prompt.archive"]},
+    "target_id":{"type":"string","minLength":1},"target_revision":{"type":"integer","minimum":0},"source":{"type":"object"},
+    "uncertainties":{"type":"array","items":{"type":"string"}},"changes":{"type":"object"}
+  }
+}

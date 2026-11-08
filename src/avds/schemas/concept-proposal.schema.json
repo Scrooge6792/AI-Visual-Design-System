@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contract_version", "operation_id", "proposal_id", "revision", "operation", "candidate_id", "target_revision", "source", "uncertainties", "changes"],
+  "properties": {
+    "contract_version": {"const": "1.0"},
+    "operation_id": {"type": "string", "minLength": 1},
+    "proposal_id": {"type": "string", "minLength": 1},
+    "revision": {"type": "integer", "minimum": 1},
+    "operation": {"const": "concept.create"},
+    "candidate_id": {"type": "string", "minLength": 1},
+    "target_revision": {"const": 0},
+    "source": {"type": "object"},
+    "uncertainties": {"type": "array", "items": {"type": "string"}},
+    "changes": {
+      "type": "object", "additionalProperties": false,
+      "required": ["preferred_name", "terms", "definition", "facet", "aliases", "relations"],
+      "properties": {
+        "preferred_name": {"type": "string", "minLength": 1},
+        "terms": {"type": "object", "additionalProperties": false, "required": ["zh", "en"], "properties": {"zh": {"type": "string", "minLength": 1}, "en": {"type": ["string", "null"]}}},
+        "definition": {"type": "string", "minLength": 1},
+        "facet": {"enum": ["work_type", "subject", "scene", "style", "technique", "composition", "lighting", "color", "material", "pose_action", "mood", "usage"]},
+        "aliases": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+        "relations": {"type": "array", "uniqueItems": true, "items": {"type": "object", "additionalProperties": false, "required": ["kind", "concept_id"], "properties": {"kind": {"enum": ["broader", "narrower", "related"]}, "concept_id": {"type": "string", "minLength": 1}}}}
+      }
+    }
+  }
+}

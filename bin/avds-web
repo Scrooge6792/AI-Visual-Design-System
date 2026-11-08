@@ -1,0 +1,4 @@
+#!/bin/sh
+set -eu
+RUNTIME_DIR=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+PYTHONPATH="$RUNTIME_DIR/src" exec /usr/bin/python3 -m avds.web --open "$@"
