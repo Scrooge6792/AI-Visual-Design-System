@@ -41,4 +41,4 @@
 - Windows 只有适配模拟和静态检查，没有实机通过证据。
 - HTTP/WebUI 行为已有自动化测试，但真实浏览器点击体验尚待用户验收。
 - 旧受信安装、Reviewer App 和真实 Vault 未被 1.0.0 更新或迁移。
-- 尚未创建或发布公开 GitHub 仓库。
+- 2026-11-09 按用户明确要求创建公开 GitHub 源码仓库 `Scrooge6792/AI-Visual-Design-System`；不包含用户配置、Vault 或素材，许可证尚未选择。

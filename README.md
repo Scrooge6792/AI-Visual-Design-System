@@ -113,7 +113,7 @@ CLI 统一返回 JSON。含中文、多行内容或 PowerShell 引号复杂时�
 
 不提供物理删除、反归档、概念更新/合并、复合原子批准、任意模板代码、云服务或跨用户数据交换。现有 Agent 账号的分析能力和额度由用户环境决定，耗尽时可以保存稍后；不会自动调用付费 API。
 
-本次必要检查在 macOS 临时 Vault 执行；Windows 原生环境尚未实机验证，现有 Windows 检查是平台适配模拟与静态检查。源码已为公开分发提供安装说明，尚未创建或发布 GitHub 仓库。
+本次必要检查在 macOS 临时 Vault 执行；Windows 原生环境尚未实机验证，现有 Windows 检查是平台适配模拟与静态检查。公开源码仓库：[Scrooge6792/AI-Visual-Design-System](https://github.com/Scrooge6792/AI-Visual-Design-System)。许可证尚未选择；源码公开不代表已授予开源许可。
 
 ## 项目文件
 
