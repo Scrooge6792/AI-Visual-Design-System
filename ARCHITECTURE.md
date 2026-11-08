@@ -1,6 +1,6 @@
 # 系统架构与实施约束
 
-当前版本：**2.0.0**。本文件只描述当前有效架构；旧版 Reviewer、Touch ID、Unix Socket 与分阶段方案已归档到 `docs/history/v1/`，不再约束当前实现。
+当前版本：**1.0.0**。本文件只描述当前有效架构；旧版 Reviewer、Touch ID、Unix Socket 与分阶段方案已归档到 `docs/history/v1/`，不再约束当前实现。
 
 ## 总体架构
 
@@ -24,7 +24,8 @@
 | --- | --- |
 | `src/avds/server.py` | 本机 HTTP 生命周期、命令路由、会话、单 Vault 锁 |
 | `src/avds/web.py` | WebUI、同源检查、文件上传、稳定 ID 媒体读取 |
-| `src/avds/cli.py` | init/doctor/serve/status/open/stop 与业务命令客户端 |
+| 根目录 `avds` / `src/avds/user_cli.py` | 面向用户的精简快捷入口：版本、启动、状态与用户配置 |
+| `bin/avds` / `src/avds/cli.py` | 项目内完整 Agent 客户端：init/doctor/open/stop 与全部业务命令 |
 | `src/avds/store.py` | 数据模型、状态转换、事务、索引、幂等与恢复 |
 | `src/avds/platform.py` | macOS/Windows 图像解码、持久化差异和 Vision 能力 |
 | `vision/main.swift` | macOS Apple Vision Feature Print 可选 helper |
@@ -87,7 +88,7 @@ Agent 与 WebUI 均可起草、展示和审核。审核必须绑定 `proposal_id
 
 ## HTTP 与浏览器边界
 
-- 每次服务启动生成随机令牌；CLI 使用 bearer，浏览器通过 `avds open` 建立 HttpOnly、SameSite=Strict 会话。
+- 每次服务启动生成随机令牌；CLI 使用 bearer，浏览器在 `avds serve --open` 时建立会话，Agent 也可从项目目录通过 `./bin/avds open` 重新打开。
 - Host 和浏览器 Origin 必须匹配实际本机端口；应用 CSP、无跨域许可且不记录令牌。
 - `/api/import` 接收文件后仍调用同一 `import.stage` 校验；上传临时文件不成为权威数据。
 - `/media` 只接受稳定 asset/queue ID，服务解析相对路径并复验文件哈希，不接受任意文件路径。

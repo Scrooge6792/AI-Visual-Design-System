@@ -18,4 +18,4 @@ if [ -x "$PROJECT_DIR/.venv/bin/python" ]; then
   PYTHON_BIN="$PROJECT_DIR/.venv/bin/python"
 fi
 
-PYTHONPATH="$PROJECT_DIR/src${PYTHONPATH:+:$PYTHONPATH}" exec "$PYTHON_BIN" -m avds.cli "$@"
+PYTHONPATH="$PROJECT_DIR/src${PYTHONPATH:+:$PYTHONPATH}" exec "$PYTHON_BIN" -m avds.user_cli "$@"

@@ -1,4 +1,4 @@
-# 2.0.0 需求基线
+# 1.0.0 需求基线
 
 本文件是当前有效需求。旧 V0.8/V1 规格已归档到 `docs/history/v1/`，其中独立 Reviewer、Touch ID、Unix Socket 和只读 WebUI 等要求不再生效。
 
@@ -7,6 +7,7 @@
 - 单人、本机使用，桌面 Agent 与 WebUI 都是完整入口。
 - Python 单一长期运行 HTTP 服务；一次 `avds serve` 同时提供业务 API 与网页。
 - CLI 是短连接客户端，不单独运行 Core、WebUI 或 Reviewer 服务。
+- 根目录 `./avds`（Windows 为 `avds.cmd`）与全局 `avds` 是同一个精简用户快捷入口，只提供版本、serve、status 和 config show/get/set；完整业务命令只从项目内 Agent CLI 调用。
 - 目标平台为 macOS 与 Windows 10/11；不建设账号、云部署、多租户、同步或用户间数据交流。
 - 源码面向公开 GitHub 分发，用户数据和配置不进入仓库。
 
@@ -95,10 +96,10 @@
 
 ## R12 · 验证与完成状态
 
-- macOS 源码、服务闭环、实际 Apple Vision、22 项自动化测试、安装与生命周期冒烟已通过。
+- macOS 源码、服务闭环、实际 Apple Vision、25 项自动化测试、安装与生命周期冒烟已通过。
 - Windows 只有平台模拟和静态检查，尚未完成实机安装与解码验证。
 - WebUI HTTP 行为已有测试，但真实浏览器点击体验尚待用户验收。
-- 因此：2.0.0 初版源码开发完成；跨平台公开发布验收尚未全部完成。
+- 因此：1.0.0 初版源码开发完成并开始正式使用；跨平台公开发布验收尚未全部完成。
 
 ## 后置范围
 

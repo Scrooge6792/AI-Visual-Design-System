@@ -41,7 +41,10 @@ def load_config(args=None) -> Config:
             values[key] = env
         if args.get(key) is not None:
             values[key] = args[key]
-    config = Config(**values)
+    return validate_config(Config(**values))
+
+
+def validate_config(config: Config) -> Config:
     config.port = int(config.port)
     if not 0 <= config.port <= 65535:
         raise ValueError("端口应为 0～65535，0 表示由系统分配")

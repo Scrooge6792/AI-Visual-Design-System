@@ -15,7 +15,7 @@ from .util import new_id
 
 
 class Handler(BaseHTTPRequestHandler):
-    server_version = "AVDS/2"
+    server_version = "AVDS/1"
 
     def setup(self):
         super().setup()
@@ -59,7 +59,7 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header("Set-Cookie", f"avds_session={self.server.token}; HttpOnly; SameSite=Strict; Path=/")
             self.send_header("Location", "/"); self._security_headers("text/plain; charset=utf-8"); self.end_headers(); return
         if not self._authorized():
-            self._error(HTTPStatus.UNAUTHORIZED, "ACCESS_DENIED", "请使用 avds open 打开本机入口"); return
+            self._error(HTTPStatus.UNAUTHORIZED, "ACCESS_DENIED", "请启动时使用 avds serve --open，或由 Agent 在项目目录运行 ./bin/avds open"); return
         try:
             if parsed.path == "/favicon.ico":
                 self.send_response(HTTPStatus.NO_CONTENT); self._security_headers("image/x-icon"); self.end_headers(); return

@@ -1,6 +1,6 @@
 # 当前决策登记
 
-版本：**2.0.0**。本文件只列当前有效决定。旧 V0.8/V1 决策和覆盖关系保存在 `docs/history/v1/DECISIONS.md`，发生冲突时以本文件和用户最新要求为准。
+版本：**1.0.0**。本文件只列当前有效决定。旧 V0.8/V1 决策和覆盖关系保存在 `docs/history/v1/DECISIONS.md`，发生冲突时以本文件和用户最新要求为准。
 
 | ID | 当前决定 | 影响 |
 | --- | --- | --- |
@@ -24,10 +24,11 @@
 | D18 | 默认前台运行 | 不注册 launchd、Windows Service 或开机启动；CLI 是短连接客户端 |
 | D19 | 零新增费用 | 不新增付费 API、云服务、服务器、存储或硬件 |
 | D20 | 当前不做高风险扩展 | 物理删除、反归档、概念合并、复杂治理、多人协作和任意模板执行后置 |
+| D21 | 用户快捷入口与完整 Agent CLI 分层 | 根目录/全局 `avds` 完全一致且只暴露常用命令；项目内 `./bin/avds` 保留完整业务能力 |
 
 ## 已验证事实
 
-- macOS：22 项 Python 测试通过，包含 CLI 帮助、HTTP 双入口、审核绑定、正式索引隔离、上传重放、事务失败回滚和真实 Apple Vision。
+- macOS：25 项 Python 测试通过，包含快捷/完整 CLI 分层、用户配置、HTTP 双入口、审核绑定、正式索引隔离、上传重放、事务失败回滚和真实 Apple Vision。
 - 安装：项目内 `.venv` editable 安装、Vision helper 构建和 init → doctor → serve → status → stop 生命周期通过。
 - 静态检查：Python、JavaScript、shell 与 `git diff --check` 通过。
 

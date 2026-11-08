@@ -2,6 +2,6 @@
 
 先阅读 AGENTS.md、README.md、docs/SOURCE-COVERAGE.md，再读 docs/REQUIREMENTS.md、ARCHITECTURE.md、DECISIONS.md、IMPLEMENTATION.md、docs/CONTRACTS.md 和 docs/PROGRESS.md。`docs/history/` 只用于追溯旧版，不作为当前实现依据。
 
-当前源码版本为 2.0.0、接口契约版本为 1.0，初版源码已经完成。系统采用 Python 单一本机 HTTP 服务，CLI 和网页共用完整导入、提案、审核提交与搜索能力。2026-11-08 用户已批准移除 Touch ID、独立 Reviewer 门禁和 Unix Socket 架构。保留版本/hash绑定、明确确认、正式/待审隔离与原图保护，不声称身份隔离。
+当前源码版本为 1.0.0、接口契约版本为 1.0；1.0.0 是开始正式使用的首个应用版本，初版源码已经完成。系统采用 Python 单一本机 HTTP 服务，CLI 和网页共用完整导入、提案、审核提交与搜索能力。根目录/全局 `avds` 是相同的精简用户快捷入口，完整 Agent 命令使用项目内 `./bin/avds`。2026-11-08 用户已批准移除 Touch ID、独立 Reviewer 门禁和 Unix Socket 架构。保留版本/hash绑定、明确确认、正式/待审隔离与原图保护，不声称身份隔离。
 
 开发只用源码目录和临时 Vault，不更新旧版受信程序或真实 Vault。按用户后续明确要求修复；当前安装启动见 README。Windows 实机验证和浏览器人工体验验收尚未完成，不自行发布 GitHub 仓库或迁移用户数据。

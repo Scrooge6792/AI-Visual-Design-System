@@ -34,7 +34,7 @@ class ServiceTests(unittest.TestCase):
         self.assertGreater(self.server.server_port, 0)
         service = self.call("status")["result"]["service"]
         self.assertEqual(service["url"], self.server.url)
-        self.assertEqual(service["version"], "2.0.0")
+        self.assertEqual(service["version"], "1.0.0")
         with self.assertRaisesRegex(ValueError, "同一 Vault"):
             Server(Config(vault=self.config.vault, port=0))
         other = Server(Config(vault=str(Path(self.temp.name) / "other"), port=0))
