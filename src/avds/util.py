@@ -4,10 +4,10 @@ import hashlib
 import json
 import os
 import re
-import subprocess
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
+from .platform import inspect_native
 
 SHA256_RE = re.compile(r"^sha256:[0-9a-f]{64}$")
 FACETS = {
@@ -56,23 +56,13 @@ def safe_relative(root: Path, relative: str) -> Path:
 def inspect_image(path: Path) -> dict:
     if path.is_symlink() or not path.is_file():
         raise ValueError("来源必须是普通文件且不能是符号链接")
-    result = subprocess.run(
-        ["/usr/bin/sips", "-g", "format", "-g", "pixelWidth", "-g", "pixelHeight", str(path)],
-        check=False, capture_output=True, text=True, timeout=20,
-    )
-    if result.returncode != 0:
-        raise ValueError("原生解码失败")
-    values = {}
-    for line in result.stdout.splitlines():
-        if ": " in line:
-            key, value = line.strip().split(": ", 1)
-            values[key] = value
-    image_format = values.get("format", "").lower()
+    size = path.stat().st_size
+    if size <= 0 or size > 512 * 1024 * 1024:
+        raise ValueError("文件体积超限")
+    image_format, width, height = inspect_native(path)
     allowed = {"png": "image/png", "jpeg": "image/jpeg", "heic": "image/heic", "webp": "image/webp"}
     if image_format not in allowed:
         raise ValueError(f"不支持的图像格式：{image_format or 'unknown'}")
-    width = int(values["pixelWidth"])
-    height = int(values["pixelHeight"])
     if width <= 0 or height <= 0 or width * height > 100_000_000:
         raise ValueError("图像像素数超限")
     size = path.stat().st_size

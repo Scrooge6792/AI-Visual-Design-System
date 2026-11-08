@@ -1,5 +1,22 @@
 # 决策登记与覆盖关系
 
+## 当前有效决定：2.0.0 跨平台单服务（2026-11-08）
+
+用户在分析替代方案后明确确认以下选择；覆盖表下历史 D02/D17/D24/D34/D46～D48/D53～D55 中相反的身份、部署、入口或平台限制。
+
+| ID | 决定 | 影响 |
+| --- | --- | --- |
+| D56 | Python 单一本机 HTTP 服务，启动一次；CLI 为短连接客户端 | 替换 Core Unix Socket + 独立 WebUI 进程，不默认注册系统服务 |
+| D57 | Agent 与 WebUI 都是完整入口，可导入、提案、审核提交与检索 | 移除网页只读和 Reviewer 独占动作；无新增数据库旁路 |
+| D58 | 取消 Touch ID / 独立 Reviewer 身份隔离 | 不再保证 Agent 无法自批；保留明确确认、最终版本展示、五项绑定、审核日志和索引隔离 |
+| D59 | 配置命令行 > 环境变量 > JSON；Vault 与端口等可选 | 本机监听、随机会话、Host/Origin/CSP；同 Vault 操作系统锁防重复服务 |
+| D60 | macOS 自动使用可用 Apple Vision，Windows 不使用 | helper 是可选能力；不自动调用云 API 或付费替代；派生缓存可重建 |
+| D61 | 面向 macOS / Windows 10/11 公开源码分发 | shell / PowerShell 安装；不做同步、用户交流、账号或云服务；本轮未发布仓库 |
+| D62 | 原生系统适配，不增加第三方生产依赖 | macOS sips / Windows PowerShell System.Drawing；Windows PNG/JPEG；目录 fsync 差异如实记录 |
+| D63 | 正式提交显式开启 SQLite 事务 | 修正旧 autocommit + `with db` 回滚缺口；失败注入覆盖审核与索引不发布 |
+
+D56～D61 是用户已确认产品/路线决定，D62～D63 是边界内实施细节。旧版安装和真实 Vault 未修改。Windows 没有实机证据，只做模拟/静态检查。以下旧决策保留审计与覆盖关系，不复活已取消的门禁。
+
 以下有效决定依据用户提供的决策级补充 S0、可读取后续会话 S1～S5 及当前要求。来源索引见 docs/SOURCE-COVERAGE.md。后续明确修订优先；运行时技术可行性仍须验证。
 
 | ID | 有效决定 | 依据/状态 |

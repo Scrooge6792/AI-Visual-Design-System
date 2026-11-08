@@ -1,86 +1,102 @@
 from __future__ import annotations
 
-import argparse
-import ctypes
-import hashlib
 import json
 import os
-import signal
-import socket
+import secrets
 import socketserver
-from pathlib import Path
+import threading
+import webbrowser
+from http.server import HTTPServer
 
+from . import __version__
+from .config import Config, VaultLock
 from .errors import AVDSError
+from .platform import visual_capability
 from .store import Store
+from .web import Handler
 
-SOL_LOCAL = 0
-LOCAL_PEERPID = 2
-
-
-def peer_path(sock: socket.socket) -> str:
-    raw = sock.getsockopt(SOL_LOCAL, LOCAL_PEERPID, 4)
-    pid = int.from_bytes(raw, byteorder=os.sys.byteorder, signed=True)
-    libproc = ctypes.CDLL("/usr/lib/libproc.dylib")
-    buffer = ctypes.create_string_buffer(4096)
-    if libproc.proc_pidpath(pid, buffer, len(buffer)) <= 0:
-        return "unknown"
-    return buffer.value.decode()
+COMMANDS = (
+    "status", "import.stage", "queue.get", "queue.preview", "search.pending", "analysis.record",
+    "proposal.create", "proposal.revise", "proposal.get", "candidate.get", "asset.get", "asset.preview",
+    "search.concepts", "search.assets", "search.explain", "search.related", "knowledge.get", "knowledge.search",
+    "prompt.get", "prompt.list", "prompt.render", "visual.index", "visual.search", "search.rebuild",
+    "operations.recover", "review.list", "review.get", "review.action",
+)
 
 
-def sha256_file(path: str) -> str:
-    digest = hashlib.sha256()
-    with open(path, "rb") as stream:
-        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
+class Server(HTTPServer):
+    """Serial requests: a single Store owns writes and SQLite transactions."""
+    allow_reuse_address = False
 
+    def server_bind(self):
+        # HTTPServer normally performs reverse DNS here. A local-only service
+        # should start without any DNS/network dependency or lookup timeout.
+        socketserver.TCPServer.server_bind(self)
+        self.server_name = self.config.host
+        self.server_port = self.socket.getsockname()[1]
 
-class RequestHandler(socketserver.StreamRequestHandler):
-    def handle(self):
-        executable = peer_path(self.request)
-        for raw in self.rfile:
-            request = None
-            try:
-                request = json.loads(raw)
-                response = self.server.dispatch(request, executable)
-                value = {"ok": True, "result": response}
-            except AVDSError as exc:
-                value = exc.as_dict(request.get("operation_id") if isinstance(request, dict) else None)
-            except Exception as exc:
-                value = AVDSError("INTERNAL_ERROR", str(exc)).as_dict()
-            self.wfile.write(json.dumps(value, ensure_ascii=False).encode() + b"\n")
-
-
-class Server(socketserver.UnixStreamServer):
-    allow_reuse_address = True
-
-    def __init__(self, socket_path: Path, store: Store, reviewer_path: str, reviewer_hash: str):
-        self.socket_path = socket_path
-        self.store = store
-        self.reviewer_path = str(Path(reviewer_path).resolve()) if reviewer_path else ""
-        self.reviewer_hash = reviewer_hash
-        socket_path.parent.mkdir(parents=True, exist_ok=True)
-        socket_path.unlink(missing_ok=True)
-        super().__init__(str(socket_path), RequestHandler)
-        os.chmod(socket_path, 0o600)
+    def __init__(self, config: Config):
+        self.config = config
+        self.lock = VaultLock(config.root)
+        self.lock.acquire()
+        self.store = None
+        self.token = secrets.token_urlsafe(32)
+        self.closed = False
+        try:
+            self.store = Store(config.root, config.visual_provider)
+            super().__init__((config.host, config.port), Handler)
+            self.url = f"http://{config.host}:{self.server_port}"
+            self.session_url = f"{self.url}/session?token={self.token}"
+            self.state = {"url": self.url, "token": self.token, "pid": os.getpid(), "vault": str(config.root)}
+            temporary = config.state_path.with_suffix(".tmp")
+            temporary.write_text(json.dumps(self.state), encoding="utf-8")
+            temporary.replace(config.state_path)
+        except Exception:
+            if self.store:
+                self.store.close()
+            self.lock.close()
+            raise
 
     def server_close(self):
-        super().server_close(); self.socket_path.unlink(missing_ok=True); self.store.close()
-
-    def trusted_reviewer(self, executable: str) -> bool:
+        if self.closed:
+            return
+        self.closed = True
+        super().server_close()
         try:
-            return (str(Path(executable).resolve()) == self.reviewer_path and
-                    sha256_file(executable) == self.reviewer_hash)
-        except OSError:
-            return False
+            self.config.state_path.unlink(missing_ok=True)
+            if self.store:
+                self.store.close()
+        finally:
+            self.lock.close()
 
-    def dispatch(self, req: dict, executable: str):
-        command = req.get("command")
-        reviewer_commands = {"review.list", "review.get", "review.action"}
-        if command in reviewer_commands and not self.trusted_reviewer(executable):
-            raise AVDSError("UNAUTHORIZED_REVIEW", "仅安装后的受信 Reviewer 可执行审核动作")
+    def dispatch(self, req: dict, source="agent"):
+        if not isinstance(req, dict) or not isinstance(req.get("command"), str):
+            raise AVDSError("VALIDATION_FAILED", "命令必须是 JSON 对象且包含 command")
+        command = req["command"]
+        if command == "service.stop":
+            threading.Thread(target=self.shutdown, daemon=True).start()
+            return {"stopping": True}
+        if command == "service.open":
+            return {"url": self.session_url}
+        if command == "commands":
+            return {"commands": list(COMMANDS)}
+        if command == "review.action":
+            if req.get("confirmed") is not True:
+                raise AVDSError("CONFIRMATION_REQUIRED", "请先展示最终提案并明确确认，再传入 confirmed=true；此字段不是身份认证")
+            if not isinstance(req.get("operation_id"), str) or not req["operation_id"]:
+                raise AVDSError("VALIDATION_FAILED", "审核动作缺少 operation_id")
+            if req.get("action") not in {"defer_current", "defer_remaining_batch"}:
+                if not isinstance(req.get("revision"), int) or isinstance(req.get("revision"), bool):
+                    raise AVDSError("VALIDATION_FAILED", "审核动作必须绑定具体 revision")
+                proposal = self.store.proposal_get(req.get("proposal_id", ""), req["revision"])
+                for key in ("proposal_hash", "target_revision"):
+                    if key not in req or req[key] != proposal[key]:
+                        raise AVDSError("STALE_PROPOSAL", f"审核绑定不一致：{key}")
+                if proposal["file_hash"] and req.get("file_hash") != proposal["file_hash"]:
+                    raise AVDSError("HASH_MISMATCH", "审核文件指纹不一致")
         routes = {
-            "status": lambda: self.store.status(),
+            "status": lambda: {**self.store.status(), "service": {"version": __version__, "url": self.url, "vault": str(self.config.root),
+                "review_identity_isolated": False, "visual": visual_capability(self.config.visual_provider, self.store.vision_helper)}},
             "import.stage": lambda: self.store.stage(req),
             "queue.get": lambda: self.store.queue_get(req.get("queue_item_id", "")),
             "queue.preview": lambda: self.store.queue_preview(req.get("queue_item_id", "")),
@@ -107,30 +123,31 @@ class Server(socketserver.UnixStreamServer):
             "operations.recover": lambda: self.store.recover(),
             "review.list": lambda: self.store.review_list(),
             "review.get": lambda: self.store.proposal_get(req.get("proposal_id", ""), req.get("revision")),
-            "review.action": lambda: self.store.review_action(req, executable),
+            "review.action": lambda: self.store.review_action(req, source),
         }
-        if command in {"asset.delete", "concept.update", "concept.merge"}:
-            raise AVDSError("OPERATION_NOT_SUPPORTED", "该操作不属于 V1")
+        if command in {"asset.delete", "concept.update", "concept.merge", "approval.record", "commit.execute"}:
+            raise AVDSError("OPERATION_NOT_SUPPORTED", "不提供该公开操作")
         if command not in routes:
             raise AVDSError("VALIDATION_FAILED", "未知命令")
         return routes[command]()
 
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--vault", required=True)
-    parser.add_argument("--socket", required=True)
-    parser.add_argument("--reviewer-path", required=True)
-    parser.add_argument("--reviewer-hash", required=True)
-    args = parser.parse_args()
-    server = Server(Path(args.socket), Store(Path(args.vault)), args.reviewer_path, args.reviewer_hash)
-    def terminate(*_):
-        raise SystemExit(0)
-    signal.signal(signal.SIGTERM, terminate)
+def serve(config: Config):
+    server = Server(config)
+    print(json.dumps({"ok": True, "url": server.url, "vault": str(config.root)}, ensure_ascii=False), flush=True)
+    if config.open_browser:
+        webbrowser.open(server.session_url)
     try:
-        server.serve_forever()
+        server.serve_forever(poll_interval=0.2)
+    except KeyboardInterrupt:
+        pass
     finally:
         server.server_close()
+
+
+def main():
+    from .cli import main as cli_main
+    cli_main(["serve", *os.sys.argv[1:]])
 
 
 if __name__ == "__main__":

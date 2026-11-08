@@ -45,7 +45,7 @@ def _validate(value, schema, path="$", errors=None):
 
 
 def validate(name: str, value):
-    schema = json.loads((Path(__file__).with_name("schemas") / f"{name}.schema.json").read_text())
+    schema = json.loads((Path(__file__).with_name("schemas") / f"{name}.schema.json").read_text(encoding="utf-8"))
     errors = _validate(value, schema)
     if errors:
         raise AVDSError("VALIDATION_FAILED", "JSON Schema 校验失败：" + "; ".join(errors[:8]))

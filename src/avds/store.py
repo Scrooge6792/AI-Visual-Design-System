@@ -10,11 +10,19 @@ from pathlib import Path
 
 from .errors import AVDSError
 from .jsonschema import validate as validate_schema
+from .platform import readonly, visual_capability, os_build, sync_directory
 from .util import FACETS, canonical_json, digest_json, file_sha256, inspect_image, new_id, now, safe_relative
 
 
+class TransactionConnection(sqlite3.Connection):
+    """sqlite's autocommit mode needs an explicit BEGIN for `with db`."""
+    def __enter__(self):
+        self.execute("BEGIN IMMEDIATE")
+        return self
+
+
 class Store:
-    def __init__(self, vault: Path):
+    def __init__(self, vault: Path, visual_provider: str = "auto"):
         self.vault = vault.resolve()
         self.data = self.vault / "data"
         self.staging = self.vault / "staging"
@@ -23,17 +31,19 @@ class Store:
         for path in (self.data, self.staging, self.objects, self.cache):
             path.mkdir(parents=True, exist_ok=True)
         self.db_path = self.data / "visual-assets.sqlite3"
-        self.db = sqlite3.connect(self.db_path, timeout=5, isolation_level=None)
+        self.db = sqlite3.connect(self.db_path, timeout=5, isolation_level=None, check_same_thread=False, factory=TransactionConnection)
         self.db.row_factory = sqlite3.Row
         self.db.execute("PRAGMA foreign_keys=ON")
         self.db.execute("PRAGMA busy_timeout=5000")
         self.db.execute("PRAGMA synchronous=FULL")
-        schema = Path(__file__).with_name("schema.sql").read_text()
+        self.db.execute("PRAGMA journal_mode=DELETE")
+        schema = Path(__file__).with_name("schema.sql").read_text(encoding="utf-8")
         self.db.executescript(schema)
         self.db.execute("INSERT OR IGNORE INTO meta VALUES('schema_version','1')")
         default_helper = Path(__file__).resolve().parents[2] / "bin" / "avds-vision"
         workspace_helper = Path(__file__).resolve().parents[2] / ".build" / "avds-vision"
         self.vision_helper = Path(os.environ.get("AVDS_VISION_HELPER", default_helper if default_helper.exists() else workspace_helper))
+        self.visual_provider = visual_provider
 
     def close(self):
         self.db.close()
@@ -188,11 +198,12 @@ class Store:
                                  "knowledge.create", "knowledge.update", "knowledge.archive",
                                  "prompt.create", "prompt.update", "prompt.archive"}:
                 raise AVDSError("OPERATION_NOT_SUPPORTED", "V1 不支持该操作")
-            if operation == "concept.create":
-                return self._create_concept_proposal(req)
-            if operation.startswith("knowledge.") or operation.startswith("prompt."):
-                return self._create_content_proposal(req)
-            return self._create_asset_proposal(req)
+            with self.db:
+                if operation == "concept.create":
+                    return self._create_concept_proposal(req)
+                if operation.startswith("knowledge.") or operation.startswith("prompt."):
+                    return self._create_content_proposal(req)
+                return self._create_asset_proposal(req)
         return self._operation(operation_id, req, work)
 
     def _create_asset_proposal(self, req):
@@ -223,9 +234,11 @@ class Store:
         proposal_id = req.get("proposal_id") or new_id("proposal")
         revision = int(req.get("revision", 1))
         if revision > 1:
-            previous = self._one("SELECT revision,state FROM change_proposals WHERE proposal_id=? ORDER BY revision DESC LIMIT 1", (proposal_id,))
+            previous = self._one("SELECT revision,state,operation,target_id FROM change_proposals WHERE proposal_id=? ORDER BY revision DESC LIMIT 1", (proposal_id,))
             if not previous or previous["revision"] + 1 != revision or previous["state"] not in {"draft", "in_review"}:
                 raise AVDSError("STALE_PROPOSAL", "修订号不是当前版本的下一版")
+            if previous["operation"] != operation or previous["target_id"] != target_id:
+                raise AVDSError("VALIDATION_FAILED", "修订不能更换操作类型或目标对象")
             self.db.execute("UPDATE change_proposals SET state='superseded' WHERE proposal_id=? AND revision=?", (proposal_id, previous["revision"]))
         body = {"contract_version": "1.0", "operation_id": req["operation_id"], "proposal_id": proposal_id,
                 "revision": revision, "operation": operation, "target_revision": target_revision,
@@ -259,9 +272,12 @@ class Store:
         candidate_id, proposal_id = req.get("candidate_id") or new_id("candidate"), req.get("proposal_id") or new_id("proposal")
         revision = int(req.get("revision", 1))
         if revision > 1:
-            previous = self._one("SELECT revision,state FROM change_proposals WHERE proposal_id=? ORDER BY revision DESC LIMIT 1", (proposal_id,))
+            previous = self._one("SELECT revision,state,target_id FROM change_proposals WHERE proposal_id=? ORDER BY revision DESC LIMIT 1", (proposal_id,))
             if not previous or previous["revision"] + 1 != revision or previous["state"] not in {"draft", "in_review"}:
                 raise AVDSError("STALE_PROPOSAL", "概念修订号不合法")
+            if req.get("candidate_id") and req["candidate_id"] != previous["target_id"]:
+                raise AVDSError("VALIDATION_FAILED", "修订不能更换候选概念身份")
+            candidate_id = previous["target_id"]
             self.db.execute("UPDATE change_proposals SET state='superseded' WHERE proposal_id=? AND revision=?", (proposal_id, previous["revision"]))
         body = {"contract_version": "1.0", "operation_id": req["operation_id"], "proposal_id": proposal_id,
                 "revision": revision, "operation": "concept.create", "candidate_id": candidate_id,
@@ -280,6 +296,18 @@ class Store:
     def _create_content_proposal(self, req):
         operation = req["operation"]; kind, action = operation.split(".", 1); changes = req.get("changes") or {}
         target_id = req.get(f"{kind}_id") or new_id(kind); target_revision = int(req.get("target_revision", 0))
+        proposal_id = req.get("proposal_id") or new_id("proposal"); revision = int(req.get("revision", 1))
+        previous = None
+        if revision > 1:
+            previous = self._one("SELECT * FROM change_proposals WHERE proposal_id=? ORDER BY revision DESC LIMIT 1", (proposal_id,))
+            if not previous or previous["revision"] + 1 != revision or previous["state"] not in {"draft", "in_review"}:
+                raise AVDSError("STALE_PROPOSAL", "内容修订号不合法")
+            if previous["operation"] != operation:
+                raise AVDSError("VALIDATION_FAILED", "修订不能更换操作类型")
+            if action == "create":
+                target_id = previous["target_id"]
+            elif previous["target_id"] != target_id:
+                raise AVDSError("VALIDATION_FAILED", "修订不能更换目标对象")
         if action == "create":
             if req.get(f"{kind}_id") or target_revision != 0: raise AVDSError("VALIDATION_FAILED", f"{operation} 目标不合法")
         else:
@@ -304,10 +332,7 @@ class Store:
                 if not self._one("SELECT 1 FROM knowledge_articles WHERE knowledge_id=? AND state='active'", (knowledge_id,)): raise AVDSError("NOT_FOUND", "Prompt 引用知识不存在")
             for concept_id in changes.get("concept_ids", []):
                 if not self._one("SELECT 1 FROM concepts WHERE concept_id=?", (concept_id,)): raise AVDSError("UNKNOWN_CONCEPT", "Prompt 引用概念不存在")
-        proposal_id = req.get("proposal_id") or new_id("proposal"); revision = int(req.get("revision", 1))
         if revision > 1:
-            previous = self._one("SELECT revision,state FROM change_proposals WHERE proposal_id=? ORDER BY revision DESC LIMIT 1", (proposal_id,))
-            if not previous or previous["revision"] + 1 != revision or previous["state"] not in {"draft", "in_review"}: raise AVDSError("STALE_PROPOSAL", "内容修订号不合法")
             self.db.execute("UPDATE change_proposals SET state='superseded' WHERE proposal_id=? AND revision=?", (proposal_id, previous["revision"]))
         body = {"contract_version": "1.0", "operation_id": req["operation_id"], "proposal_id": proposal_id,
                 "revision": revision, "operation": operation, "target_id": target_id, "target_revision": target_revision,
@@ -347,7 +372,7 @@ class Store:
                 event_id = new_id("review")
                 self.db.execute("INSERT INTO review_events VALUES(?,?,?,?,?,?,?,?,?,?)", (event_id, action, proposal["proposal_id"], proposal["revision"], proposal["proposal_hash"], proposal["file_hash"], proposal["target_revision"], reviewer_path, now(), json.dumps(req, ensure_ascii=False)))
                 return {"review_event_id": event_id, "proposal_id": proposal["proposal_id"], "state": "draft"}
-            return self._operation(req.get("operation_id"), {**req, "reviewer_path": reviewer_path}, request_changes)
+            return self._operation(req.get("operation_id"), req, request_changes)
         if action == "reject":
             def reject():
                 with self.db:
@@ -358,7 +383,7 @@ class Store:
                     event_id = new_id("review")
                     self.db.execute("INSERT INTO review_events VALUES(?,?,?,?,?,?,?,?,?,?)", (event_id, action, proposal["proposal_id"], proposal["revision"], proposal["proposal_hash"], proposal["file_hash"], proposal["target_revision"], reviewer_path, now(), json.dumps(req, ensure_ascii=False)))
                 return {"review_event_id": event_id, "proposal_id": proposal["proposal_id"], "state": "rejected"}
-            return self._operation(req.get("operation_id"), {**req, "reviewer_path": reviewer_path}, reject)
+            return self._operation(req.get("operation_id"), req, reject)
         if action != "approve":
             raise AVDSError("VALIDATION_FAILED", "未知审核动作")
         for field in ("proposal_hash", "target_revision"):
@@ -371,7 +396,7 @@ class Store:
             raise AVDSError("DEPENDENCY_UNRESOLVED", "候选概念尚未落实")
         review_id = new_id("review")
         operation_id = req.get("operation_id") or new_id("reviewop")
-        request = {**req, "reviewer_path": reviewer_path}
+        request = dict(req)
 
         def work():
             with self.db:
@@ -425,8 +450,8 @@ class Store:
             object_path = safe_relative(self.vault, object_relative); object_path.parent.mkdir(parents=True, exist_ok=True)
             if not object_path.exists():
                 os.replace(old_path, object_path)
-                directory_fd = os.open(object_path.parent, os.O_RDONLY); os.fsync(directory_fd); os.close(directory_fd)
-            os.chmod(object_path, 0o444)
+                sync_directory(object_path.parent)
+            readonly(object_path)
             if file_sha256(object_path) != proposal["file_hash"]:
                 raise AVDSError("HASH_MISMATCH", "对象文件哈希异常")
             self.db.execute("UPDATE files SET relative_path=? WHERE file_hash=?", (object_relative, proposal["file_hash"]))
@@ -460,11 +485,11 @@ class Store:
             raise AVDSError("HASH_MISMATCH", "目标修订文件已存在但内容不同")
         if temporary.exists():
             if temporary.read_bytes() != data: raise AVDSError("RECOVERY_REQUIRED", "未完成文件与当前请求不一致")
-            os.replace(temporary, target); os.chmod(target, 0o444); return
+            os.replace(temporary, target); readonly(target); return
         with temporary.open("xb") as stream:
             stream.write(data); stream.flush(); os.fsync(stream.fileno())
-        os.replace(temporary, target); os.chmod(target, 0o444)
-        directory_fd = os.open(target.parent, os.O_RDONLY); os.fsync(directory_fd); os.close(directory_fd)
+        os.replace(temporary, target); readonly(target)
+        sync_directory(target.parent)
 
     def _commit_knowledge(self, proposal, review_id):
         body, action, knowledge_id = proposal["body"], proposal["operation"].split(".", 1)[1], proposal["target_id"]
@@ -630,7 +655,7 @@ class Store:
         if not row: raise AVDSError("NOT_FOUND", "知识文章不存在")
         result = dict(row); path = safe_relative(self.vault, row["relative_path"])
         if not path.exists(): raise AVDSError("FILE_MISSING", "知识正文缺失")
-        result["content_markdown"] = path.read_text(); result["links"] = [dict(r) for r in self.db.execute("SELECT target_kind,target_id FROM knowledge_links WHERE knowledge_id=?", (knowledge_id,))]
+        result["content_markdown"] = path.read_text(encoding="utf-8"); result["links"] = [dict(r) for r in self.db.execute("SELECT target_kind,target_id FROM knowledge_links WHERE knowledge_id=?", (knowledge_id,))]
         return result
 
     def knowledge_search(self, req):
@@ -683,7 +708,10 @@ class Store:
     def _ensure_feature(self, asset_id, file_hash, image_path, force=False):
         digest = file_hash.split(":", 1)[1]; relative = f"cache/featureprints/{digest}.avdsfp"; output = safe_relative(self.vault, relative)
         row = self._one("SELECT * FROM visual_features WHERE asset_id=?", (asset_id,)) if asset_id else None
-        build = subprocess.run(["/usr/bin/sw_vers", "-buildVersion"], capture_output=True, text=True).stdout.strip()
+        capability = visual_capability(self.visual_provider, self.vision_helper)
+        if not capability["available"]:
+            raise AVDSError("CAPABILITY_UNAVAILABLE", capability["reason"])
+        build = os_build()
         if not force and row and row["file_hash"] == file_hash and row["os_build"] == build and output.exists(): return output
         if not self.vision_helper.exists(): raise AVDSError("STORAGE_UNAVAILABLE", "Apple Vision helper 未安装")
         output.parent.mkdir(parents=True, exist_ok=True)
@@ -695,6 +723,9 @@ class Store:
         return output
 
     def visual_index(self, req):
+        capability = visual_capability(self.visual_provider, self.vision_helper)
+        if not capability["available"]:
+            raise AVDSError("CAPABILITY_UNAVAILABLE", capability["reason"])
         force = bool(req.get("force")); indexed = []
         rows = self.db.execute("SELECT a.asset_id,a.file_hash,f.relative_path FROM assets a JOIN files f USING(file_hash) WHERE a.state='active'").fetchall()
         for row in rows:

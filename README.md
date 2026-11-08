@@ -1,72 +1,100 @@
-# AI Visual Design System V1
+# AI Visual Design System
 
-V0.8 Reviewed 交接包已于 2026-11-07（Asia/Shanghai）进入正式实施。Phase 0 已通过；V1 使用本地 SQLite、工作区外受信 Core、Touch ID Reviewer 与 Agent CLI，不引入第三方生产依赖或新增费用。
+当前源码版本：**2.0.0**。接口契约版本为 `1.0`，与应用发布版本分别演进。
 
-本包整合了用户提供的 V0.3～V0.5 决策级恢复材料，以及可读取的 V0.6～V0.7.1 和 V0.8 交接方案。十二个分面、受控词表、VARP、独立状态模型、批量审核及依赖门槛已补齐；后续明确修订优先。详见 [来源覆盖](docs/SOURCE-COVERAGE.md)。补充材料是结构化恢复，不是逐字聊天记录；技术可行性仍待未来 Phase 0 验证。
+本机视觉素材、知识与 Prompt 资料库。Python 单服务同时提供 Agent CLI 和浏览器界面：保存图片、起草提案、审核提交、持久稍后、搜索与预览都可从任一入口完成。默认只监听本机，不提供账号体系、云部署、数据同步或用户间交流。
 
-本版已按审查意见修正资产 create/update/archive Schema，补全候选概念审核与跨会话只读素材访问，收紧第三方决策权限及 Phase 1 范围。V1 物理删除、复合原子批准与复杂词典治理后置。修订记录见 [交付核对](DELIVERY-CHECK.md)。本版取代旧 docs.zip，文件体系和规范文档数量不增加。
+2026-11-08 用户确认的新架构覆盖旧版 Unix Socket、独立 Reviewer 和 Touch ID 门禁。审核仍绑定具体提案版本、内容摘要、原图指纹与目标修订，并要求明确确认；**不再声称 Agent 与用户之间存在审批身份隔离**。`confirmed=true` 是工作流确认字段，不是身份凭据。
 
-## 项目目标
+## 安装
 
-为单人 macOS 使用场景建立 Agent 优先的个人视觉资产系统：素材保存 → 可选 AI 分析与提案 → 独立本地 Reviewer 人工审核或稍后 → 可信 Core 正式入库 → Agent 检索。多年积累的原图、人工审核成果和知识属于核心资产。
+需要 Python 3.11 或更新稳定版，且其 SQLite 包含 FTS5。运行时只用 Python 标准库和系统原生能力，没有第三方生产依赖、模型 API 或新增订阅。首次建立虚拟环境时，pip 可能需要联网获取 setuptools 构建工具。下面的安装只写当前源码目录的 `.venv` / `.build`，不注册开机服务，不改旧版受信安装或真实 Vault。
 
-源码保留在本项目目录；受信运行文件安装到 `~/Library/Application Support/AIVisualDesign` 与 `~/Applications/AVDS Reviewer.app`，默认 Vault 为 `~/Pictures/VisualAssetVault`。Agent 对这些位置没有直接写权限，只能使用受控 CLI；所有审核状态变化都由 Reviewer 请求 Touch ID。
-
-## 文件导航
-
-| 文件 | 用途 |
-| --- | --- |
-| [AGENTS.md](AGENTS.md) | 后续 Codex 的执行边界 |
-| [docs/REQUIREMENTS.md](docs/REQUIREMENTS.md) | 需求、范围与行为规则 |
-| [ARCHITECTURE.md](ARCHITECTURE.md) | 角色、存储、提交与检索架构 |
-| [DECISIONS.md](DECISIONS.md) | 有效决策、覆盖关系与未决项 |
-| [IMPLEMENTATION.md](IMPLEMENTATION.md) | Phase 0～3、必要验证与完成条件 |
-| [START-HERE.md](START-HERE.md) | 可复制到 Codex Desktop 的启动指令 |
-| [docs/CONTRACTS.md](docs/CONTRACTS.md) | 提案、审核、查询和错误示例契约 |
-| [docs/SOURCE-COVERAGE.md](docs/SOURCE-COVERAGE.md) | 来源覆盖与审查修订依据 |
-| [docs/PROGRESS.md](docs/PROGRESS.md) | 后续会话的进度入口 |
-| [docs/SOURCE-SUPPLEMENT.md](docs/SOURCE-SUPPLEMENT.md) | 用户提供的早期决策级补充材料 |
-
-## 安装与运行
-
-首次安装或升级（会重新构建、更新受信运行文件并启动 Core）：
+macOS，在取得源码后的项目目录执行：
 
 ```sh
 sh scripts/install.sh
+.venv/bin/avds init --vault "$HOME/Pictures/MyVisualVault"
+.venv/bin/avds doctor
+.venv/bin/avds serve --open
 ```
 
-日常状态、启动、审核与停止：
+安装脚本使用 `python3`；需要指定解释器时设置 `AVDS_PYTHON=/完整路径/python3`。Apple Vision helper 会尝试使用已安装的 Xcode Command Line Tools 构建；没有 Swift 编译工具时普通资料管理仍可用。补装系统编译工具后运行 `sh scripts/build.sh` 并重启服务即可自动启用 Vision。不自动安装系统工具。
+
+Windows 10/11，在 PowerShell 的项目目录执行（安装好包含 `py` 启动器的 Python）：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1
+.\.venv\Scripts\avds.exe init --vault "$env:USERPROFILE\Pictures\MyVisualVault"
+.\.venv\Scripts\avds.exe doctor
+.\.venv\Scripts\avds.exe serve --open
+```
+
+Windows 使用系统 Windows PowerShell / System.Drawing 解码 PNG、JPEG，不使用 Apple Vision。macOS 使用系统图像解码器，支持 PNG、JPEG，以及系统实际可解码的 HEIC/WebP。不要仅改扩展名转换格式；无法解码时返回错误，原文件保留。
+
+`serve` 是唯一长期运行的进程，保持这个终端开启。Agent CLI 每次请求结束即退出；浏览器无需单独启动 WebUI 服务。默认不后台运行、不自动启动。安装脚本不会执行 `init` 或打开真实库。
+
+已有配置时 `init` 不覆盖；可编辑配置，或以 `--config 新路径` 初始化另一套配置。源码升级后重启同一服务即可。旧版用户应先由自己停止旧 Core / Reviewer，再让新版指向原 Vault；本次开发没有安装、更新、停止或迁移旧版运行实例。
+
+## 配置与日常使用
+
+默认配置文件为 `~/.avds/config.json`，示例：
+
+```json
+{
+  "vault": "/your/path/VisualVault",
+  "host": "127.0.0.1",
+  "port": 8765,
+  "open_browser": false,
+  "visual_provider": "auto"
+}
+```
+
+Windows JSON 路径使用 `C:/Users/yourname/Pictures/VisualVault` 或双反斜杠。优先级：命令行 > `AVDS_VAULT/HOST/PORT/OPEN_BROWSER/VISUAL_PROVIDER` 环境变量 > 配置文件 > 内置默认值。`--config` / `AVDS_CONFIG` 选择配置文件。`host` 仅接受 `127.0.0.1` 或 `localhost`；`port=0` 由系统分配。视觉提供者为 `auto`、`none` 或 `apple-vision`，Windows 中 Apple Vision 始终不可用。
+
+以下 `avds` 指当前虚拟环境中的命令；macOS 也可用 `sh bin/avds`，Windows 可用 `.\.venv\Scripts\avds.exe`。
 
 ```sh
-"$HOME/Library/Application Support/AIVisualDesign/bin/avds" status
-"$HOME/Library/Application Support/AIVisualDesign/bin/avds-start"
-"$HOME/Library/Application Support/AIVisualDesign/bin/avds-review"
-"$HOME/Library/Application Support/AIVisualDesign/bin/avds-web"
-"$HOME/Library/Application Support/AIVisualDesign/bin/avds-stop"
+avds serve --port 8877 --open
+avds --version
+avds status
+avds open
+avds stop
 ```
 
-通常无需手写 JSON：在本 Codex 项目中用自然语言要求 Agent 导入、记录分析、起草提案、查找待审项或搜索资产。Agent 调用安装后的只读/提案 CLI；批准、拒绝、退回修改、稍后与“本批次后续全部稍后”只能在 Reviewer 中完成，并要求 Touch ID。
+最后三项从所选 Vault 的服务记录发现实际端口，只建立短连接。临时更改 Vault 时，其他命令也应传相同 `--vault`。同一 Vault 由操作系统锁限制为一个服务；不同 Vault 可以使用不同端口。端口冲突会报错，不偷偷改端口。服务重启后浏览器会话失效，重新 `avds open`。
 
-CLI 是稳定 JSON 接口，形式为：
+## Agent 与网页工作流
+
+可直接要求 Agent：“保存这些图片，先全部稍后”“为这张图起草描述”“查看最终提案，我确认后批准”“搜索已批准的逆光素材”。Agent 与网页都通过同一服务调用业务操作，不直接执行 SQL。网页支持文件选择、提案表单、完整内容预览、逐项审核、退回修改、拒绝、两种稍后，以及全部公开操作接口。
+
+CLI 统一返回 JSON。含中文、多行内容或 PowerShell 引号复杂时，优先将载荷存为 UTF-8 文件并传 `--json-file`：
 
 ```sh
-"$HOME/Library/Application Support/AIVisualDesign/bin/avds" <command> --json '<JSON 对象>'
+avds import.stage --json-file import.json
+avds proposal.create --json-file proposal.json
+avds review.list
+avds review.get --json-file selected-proposal.json
+avds review.action --json-file confirmed-review.json
+avds search.assets --json '{"text":"逆光"}'
 ```
 
-主要命令：`import.stage`、`analysis.record`、`proposal.create/revise/get`、`queue.get/preview`、`asset.get/preview`、`candidate.get`、`search.pending/concepts/assets/related/explain`、`knowledge.get/search`、`prompt.get/list/render`、`visual.index/search`、`search.rebuild`、`operations.recover`。批准、拒绝、退回与两种稍后均不暴露给 Agent；`approval.record` 与 `commit.execute` 也只存在于受信组件内部。
+导入参数使用 `source_path`、唯一 `operation_id` 和可选 `batch_id/source`。提案保存后，先读取展示最终版本再确认审核。审核须提交唯一 `operation_id`、`action`、`confirmed:true`、`proposal_id`、整数 `revision`、`proposal_hash`、`target_revision`，资产还需 `file_hash`。五项绑定来自服务返回，不能猜测；批准动作在同一服务内部提交。新版本必须重新审核；新概念先批准，再修订资产引用。`commands` 列出公开命令，详见 [契约](docs/CONTRACTS.md)。
 
-## V1 已知限制
+正式检索只包含已审核有效内容；草案、待审图片与未批准知识均隔离。知识以版本化 Markdown 保存，Prompt 以版本化 JSON 保存，模板只替换已声明变量，不执行代码。Apple Vision 的视觉距离仅是排序信号，缓存可以重建，不自动生成正式标签。
 
-- 视觉分析依赖当前 Codex Desktop 账号能力和额度；额度不可用时仍可暂存与稍后，不自动切换付费 API。
-- Reviewer 是原生 macOS 应用，正式审核要求已配置的 Touch ID；不提供聊天确认降级。
-- 中文检索采用已批准术语、FTS5 和受控子串回退，没有高级中文分词。
-- WebUI 只读，创建或修改知识、Prompt 与素材仍需 Agent 提案并在独立 Reviewer 中完成 Touch ID 审核。
-- Apple Vision 相似距离只用于排序，不能解释为同一作品、同一作者或正式概念；系统升级后派生特征会重建。
-- 仍不提供物理删除、反归档、概念更新/合并、复合原子批准、云部署或任意模板代码执行。
-- 安装/升级会改变受信程序摘要，必须重新运行安装脚本并重启 Core；直接修改源码不会改变已安装运行版本。
+## 数据、恢复与限制
 
-## Finder 便携备份
+所有必要资料位于一个 Vault，内部使用稳定 ID 和相对路径；原图按 SHA-256 寻址，不因拒绝、归档或错误删除。SQLite 使用 DELETE / FULL / 外键 / 5000ms busy timeout。文件复制与数据库事务是分开的，保留幂等操作与恢复记录。Windows 提供文件 fsync 和同卷替换，Python 标准接口不能同步目录句柄，不能声称与 macOS 目录 fsync 完全等价。
 
-结束导入、提交和其他数据库操作，关闭 Reviewer、Core 与全部数据库连接；在 Finder 中复制或压缩完整 VisualAssetVault，再保存到已有的其他存储设备。恢复时解压到新位置并重新选择该 Vault；内部引用不得依赖旧绝对路径。备份前若有崩溃留下的未完成操作，先恢复到稳定状态并正常关闭。
+备份时完成当前操作并 `avds stop`，确认服务终端已退出，再通过 Finder / 文件资源管理器复制或压缩**整个 Vault**。不要只复制数据库，也不要运行中复制。恢复时将配置指向新目录；服务记录是临时状态，重新启动会更新。不提供在线快照、复杂容灾或自动备份。
 
-不开发备份 CLI、在线快照、自动恢复向导、备份保留策略或复杂容灾系统。不要只复制数据库而遗漏原图和持久待审核资料，也不要在数据库操作进行中复制。未来若切换 WAL，必须同步修订关闭和复制规则。
+不提供物理删除、反归档、概念更新/合并、复合原子批准、任意模板代码、云服务或跨用户数据交换。现有 Agent 账号的分析能力和额度由用户环境决定，耗尽时可以保存稍后；不会自动调用付费 API。
+
+本次必要检查在 macOS 临时 Vault 执行；Windows 原生环境尚未实机验证，现有 Windows 检查是平台适配模拟与静态检查。源码已为公开分发提供安装说明，尚未创建或发布 GitHub 仓库。
+
+## 项目文件
+
+[需求](docs/REQUIREMENTS.md) · [架构](ARCHITECTURE.md) · [决策](DECISIONS.md) · [实施](IMPLEMENTATION.md) · [接口契约](docs/CONTRACTS.md) · [进度](docs/PROGRESS.md) · [来源覆盖](docs/SOURCE-COVERAGE.md)
+
+必要回归：`PYTHONPATH=src python3 -m unittest discover -s tests -v`。Windows PowerShell 使用 `$env:PYTHONPATH='src'; py -3 -m unittest discover -s tests -v`。测试只创建临时资料；有原生 Vision 才运行真实视觉比较。

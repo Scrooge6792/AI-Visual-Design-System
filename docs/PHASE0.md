@@ -1,5 +1,7 @@
 # Phase 0 技术可行性记录
 
+本文件保留**旧 macOS Reviewer / Touch ID / Unix Socket** 的历史证据。2026-11-08 用户取消该门禁，改为 Python 单一本机 HTTP 服务与双完整入口；不重做旧隔离门槛，不把本文件“通过”解释为新版或 Windows 验证通过。当前检查见 PROGRESS.md：20 项在 macOS 临时 Vault 通过，Windows 仅适配模拟、未实机测试。旧安装与真实 Vault 未更新。
+
 更新：2026-11-07（Asia/Shanghai）。状态：**通过**。
 
 ## 已有证据

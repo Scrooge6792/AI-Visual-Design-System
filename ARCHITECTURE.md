@@ -1,5 +1,27 @@
 # 系统架构与实施约束
 
+## 当前运行架构（2.0.0，2026-11-08）
+
+```text
+Agent → 短连接 CLI ─┐
+                  ├→ 一个 Python 本机 HTTP 服务 → Store → Vault / SQLite
+浏览器 WebUI ──────┘       导入、提案、审核提交、查询、知识、Prompt
+```
+
+同一个 HTTPServer 串行处理请求，单一 Store 连接统一正式写入；SQLite 显式 BEGIN IMMEDIATE，DELETE/FULL/外键/busy timeout=5000。写操作保留幂等 operation_id；文件就绪与 SQLite 提交仍是独立阶段，失败保留原图和恢复信息。CLI 不持有数据库连接，默认不运行额外守护进程，不注册系统服务。
+
+`config.py` 合并命令行、环境变量、JSON 配置；`VaultLock` 在打开 Store 前使用 Windows msvcrt 或 POSIX flock 获取操作系统锁，崩溃由系统释放，不用 PID 文件当互斥证据。`data/service.json` 仅保存当前端口/会话/PID/根路径，是可替换运行状态；原图和权威记录仍用相对路径/稳定 ID。
+
+HTTP 仅绑定 127.0.0.1 / localhost；每次服务随机令牌。CLI 读取所选 Vault 服务记录并使用 bearer 短连接；浏览器由 avds open 建立 HttpOnly / SameSite=Strict 会话。Host 和浏览器 Origin 必须匹配实际本机端口，配合 CSP、无跨域许可、不记令牌访问日志。此令牌防外站访问，不提供 Agent/用户身份隔离。
+
+Agent 与 WebUI 开放同一完整业务命令。审核要求 `confirmed:true` 和具体提案修订/摘要/目标绑定；确认不是密码或可信身份凭证。服务内部执行 approval/commit 协议，不开放独立任意提交接口。取消旧 Reviewer 二进制摘要校验与 Touch ID。未审核内容继续隔离于正式索引，原图、状态模型、候选依赖和变更版本要求不变。
+
+浏览器通过 `/api/import` 流式上传到暂时接收文件，再经同一 `import.stage` 校验复制进持久 staging；请求结束清理上传临时文件，不删除用户原文件或已持久原图。媒体从稳定 ID 获取并复验哈希，不接受任意媒体路径。
+
+平台差异集中 `platform.py`：macOS 系统解码；Windows PowerShell/System.Drawing 原生 PNG/JPEG 解码；macOS 有 helper 时 auto Apple Vision，Windows 返回 CAPABILITY_UNAVAILABLE。无第三方生产依赖。Windows 文件 fsync + 同卷 replace，无法用标准库同步目录句柄，不能宣称目录持久化与 POSIX 完全等价。
+
+以下为旧版细分规格。涉及独立 Reviewer、可信进程身份隔离、Unix Socket、Touch ID 或 WebUI 只读的段落已被本节覆盖；数据模型、独立状态、原图保护、版本/hash绑定、查询与恢复协议继续适用。旧运行组件不参与当前安装链路。
+
 本文件是文档规格。逻辑实体与状态以用户提供的 V0.3～V0.5 决策级补充及后续修订为依据；具体列类型、索引、传输实现由 Codex 后续确定。不得将规格当作已实现系统。
 
 ## 角色与数据流

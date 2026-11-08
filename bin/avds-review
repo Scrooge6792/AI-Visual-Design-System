@@ -1,3 +1,4 @@
 #!/bin/sh
 set -eu
-exec /usr/bin/open -n "$HOME/Applications/AVDS Reviewer.app"
+PROJECT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+exec sh "$PROJECT_DIR/bin/avds" open "$@"

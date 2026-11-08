@@ -1,5 +1,7 @@
 # 审查修订摘要与交付核对
 
+本文件是 V0.8 文档交付历史。当前源码版本为 2.0.0；2026-11-08 跨平台单服务实现、授权覆盖关系和检查见 README.md、DECISIONS.md 与 docs/PROGRESS.md。下文旧 Reviewer/Touch ID 或“未实施”状态不代表当前版本。
+
 本轮基于现有 V0.8 文档定向修订，未从零规划，未增加规范文件。归档文件名为 AI-Visual-Design-System-V0.8-reviewed.zip。
 
 ## 修复内容与涉及文件

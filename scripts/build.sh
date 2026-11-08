@@ -1,14 +1,10 @@
 #!/bin/sh
 set -eu
-ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
-BUILD="$ROOT/.build"
-APP="$BUILD/AVDS Reviewer.app"
-mkdir -p "$BUILD/module-cache" "$APP/Contents/MacOS"
-xcrun swiftc -module-cache-path "$BUILD/module-cache" "$ROOT/reviewer/main.swift" \
-  -framework AppKit -framework LocalAuthentication -o "$APP/Contents/MacOS/AVDSReviewer"
-xcrun swiftc -module-cache-path "$BUILD/module-cache" "$ROOT/vision/main.swift" \
-  -framework Vision -o "$BUILD/avds-vision"
-cp "$ROOT/reviewer/Info.plist" "$APP/Contents/Info.plist"
-codesign --force --sign - --options runtime --timestamp=none "$APP"
-chmod +x "$ROOT/bin/avds" "$ROOT/bin/avds-core" "$ROOT/bin/avds-review" "$ROOT/bin/avds-web" "$ROOT/scripts/install.sh" "$ROOT/scripts/start.sh" "$ROOT/scripts/stop.sh"
-echo "$APP"
+PROJECT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+if [ "$(uname -s)" != Darwin ]; then
+  echo "Apple Vision 仅适用于 macOS；无需构建即可使用资料管理服务。"
+  exit 0
+fi
+mkdir -p "$PROJECT_DIR/.build/module-cache"
+xcrun swiftc -module-cache-path "$PROJECT_DIR/.build/module-cache" "$PROJECT_DIR/vision/main.swift" -framework Vision -o "$PROJECT_DIR/.build/avds-vision"
+echo "Apple Vision helper 构建完成。"

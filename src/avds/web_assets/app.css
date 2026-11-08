@@ -81,4 +81,20 @@ main{padding-inline:18px}
 }
 @media(max-width:700px){.library-shelf{grid-template-columns:1fr}
 }
+.workbench{margin-top:48px;padding-top:22px;border-top:1px solid var(--line)}
+.work-columns{display:grid;grid-template-columns:1fr 2fr;gap:28px}
+.work-columns article,.work-columns form{background:var(--white);padding:24px}
+.workbench label{display:block;font-size:13px;margin:16px 0 7px}
+.workbench input,.workbench select,.workbench textarea{display:block;width:100%;padding:10px;border:1px solid var(--line);font:inherit;background:var(--white);color:var(--ink)}
+.workbench button,.pending-grid button{border:1px solid var(--line);background:var(--white);color:var(--ink);padding:10px 14px;cursor:pointer;margin:8px 6px 8px 0}
+.workbench button[type=submit],#importButton{background:var(--cobalt);color:white;border-color:var(--cobalt)}
+.workbench button:disabled{opacity:.5;cursor:wait}
+.workbench details{margin-top:18px}.workbench summary{cursor:pointer;color:var(--cobalt)}
+.review-list{display:grid;gap:18px;margin:28px 0}
+.review-card{padding:24px;background:var(--white);border-left:5px solid var(--amber)}
+.review-card img{width:180px;max-height:180px;object-fit:contain;float:right;margin:0 0 16px 20px}
+.review-card pre,.advanced pre{white-space:pre-wrap;overflow-wrap:anywhere;background:var(--paper);padding:14px;max-height:420px;overflow:auto;clear:both}
+.review-card .confirm-label{display:flex;align-items:center;gap:10px}.confirm-label input{width:auto}
+.dialog-body{padding:28px}#workMessage{min-height:24px}#importResults button{display:block;overflow-wrap:anywhere;text-align:left}
+@media(max-width:750px){.work-columns{grid-template-columns:1fr}.review-card img{float:none;width:100%}}
 

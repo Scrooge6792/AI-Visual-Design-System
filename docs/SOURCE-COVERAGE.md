@@ -13,6 +13,7 @@
 | S4 | 51359a7d-fc35-45bf-a1e9-09e4bc5fd1fb | 取消默认搜索解释、V0.7 安全存储 |
 | S5 | 5e2d91af-3a24-4ba9-ab82-c33a6a6c36df | Reviewer、两种稍后、V0.6 检索 |
 | S6 | 当前用户“交接包审查问题修订” | P0 三项闭环修复、P1 决策权限与 Phase 1 最小范围 |
+| S7 | 2026-11-08 用户明确确认的跨平台方案 | Python 单一本机服务、两完整入口、取消 Touch ID/独立 Reviewer 门禁、可配置部署、macOS 可选自动 Vision、Windows 无 Vision、公开源码准备、不做同步或交流 |
 
 ## 覆盖矩阵
 
@@ -25,6 +26,7 @@
 | V0.7 | 内容寻址、事务恢复、安全、隐私、派生数据保护 | ARCHITECTURE；REQUIREMENTS R07/R08 |
 | V0.7.1 | DELETE/FULL、Finder 复制、取消复杂备份、三项可靠性 | README；REQUIREMENTS R08；DECISIONS |
 | V0.8 | 文档交接、Phase 0～3、必要测试、用户验收、零新增费用 | AGENTS；IMPLEMENTATION；START-HERE |
+| V2.0.0 | Python 单服务、Agent/WebUI 双完整入口、取消 Touch ID 门禁、macOS 可选 Vision、Windows 无 Vision、公开源码安装准备 | S7；README；AGENTS；ARCHITECTURE；DECISIONS；PROGRESS |
 
 旧包 G01～G03 来源完整性阻塞已解除。完整性指上述设计输入的有效决策覆盖，不声称拥有全部逐字聊天记录。
 
@@ -38,4 +40,4 @@ S6：用户在本会话提供的“交接包审查问题修订”，为本次定
 
 用户当前要求及补充材料为正式输入，明确后续修订覆盖早期建议。DECISIONS 记录覆盖关系。具体列类型、运行时和通信实现由未来 Codex 在边界内决定，不冒充历史决定。
 
-当前未安装依赖或执行应用，未验证账户集成、权限隔离或运行时能力。原文中的技术版本、实际 Stars 和漏洞修复陈述不作为当前审查结果；Stars 门槛是准入政策，实际值需实施时核验。工程风险继续进入 Phase 0，不阻塞本次文档交付。
+历史 V1 已安装并有 Phase 0 证据；当前 S7 重构只更新源码、测试和文档，没有更新旧安装或真实 Vault。S7 覆盖旧身份隔离、Unix Socket 和只读 WebUI 结构；旧 Phase 0 结果不是新版 Windows 运行证明。当前实现与检查见 PROGRESS.md。原文中的技术版本、实际 Stars 和漏洞陈述不作为当前保证；Stars 门槛仍是准入政策。

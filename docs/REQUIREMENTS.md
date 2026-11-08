@@ -1,4 +1,19 @@
-# V1 需求基线
+# 需求基线
+
+## 当前有效修订（2.0.0，2026-11-08：跨平台单服务）
+
+本节为用户已确认的最新决定，覆盖下文旧 R01/R03/R07/R09/R11 中的 macOS 单平台、独立 Reviewer、Touch ID、Agent 无审核权和只读 WebUI 表述；其他数据、检索、原图、审核版本、成本和恢复要求继续有效。下文旧规格保留为细分需求及历史来源，不得据其恢复已取消的门禁。
+
+- Python 单一长期运行 HTTP 服务只监听本机；一次 `avds serve` 同时提供业务与网页。Agent CLI 是短连接客户端，网页不再单独启动服务。
+- Agent 与 WebUI 都可完整导入、分析记录、起草/修订、查看最终内容、明确确认、审核提交、拒绝/退回、持久稍后、搜索、管理知识和 Prompt。不得限制用户只能在特定入口审核。
+- 取消独立 Reviewer 和 Touch ID 身份隔离。审核是内容与版本确认流程，`confirmed=true` 不证明调用者身份；不再保证 Agent 技术上无法自批。确认前展示最终内容，仍校验 proposal_id/revision/proposal_hash/file_hash/target_revision，新版本重审。
+- 端口、仅本机 host、Vault、是否打开浏览器和视觉提供者可配置；命令行 > 环境变量 > config > 默认值。同一 Vault 仅一个服务，端口冲突明确报错。默认不注册系统服务。
+- 目标平台为 macOS 与 Windows 10/11。核心不依赖 Unix Socket、libproc、launchd、sips/sw_vers 或 Unix chmod；原生图像解码、只读标志与持久化细节由平台模块隔离。macOS 自动使用已构建 Apple Vision；不可用时明确报告。Windows 不提供 Apple Vision。
+- macOS 使用系统实际支持的 PNG/JPEG/HEIC/WebP；Windows 首版系统解码 PNG/JPEG，其他格式明确拒绝。文件上限 512 MiB、100,000,000 像素；原图保持不可变和哈希校验。
+- 源码面向公开 GitHub 分发，提供 shell / PowerShell 安装和 Agent 说明；不建设同步、交流、账号或公共服务。发布和真实库迁移不包含在本次源码开发授权内。
+- 不修改现有受信安装、Reviewer App 或真实 Vault。Windows 无实机时只记录平台适配模拟/静态检查；不能把 macOS 测试记为 Windows 已通过。
+
+## 既有细分需求与历史规格
 
 本文件整合 V0.3～V0.7.1 有效决定；早期版本依据用户正式提供的决策级补充材料。R 编号为交接索引，不是原会话编号。技术选型及可行性未验证。来源见 SOURCE-COVERAGE.md。
 

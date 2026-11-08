@@ -1,6 +1,30 @@
 # 必要示例契约
 
-本文件定向完善 V0.8 交接契约，不代表已有应用、CLI 或 API。JSON Schema 采用 Draft 2020-12；协议名 0.8-reviewed-example 表示文档示例。ID、名称及哈希均为虚构样例，64 位示例哈希语法有效但不代表真实文件或真实审批。
+## 当前实现契约（应用 2.0.0 / 契约 1.0，2026-11-08）
+
+当前正文为 `contract_version:1.0`，实际 Schema 见 `src/avds/schemas/`。下文 `0.8-reviewed-example` 和 Reviewer 专有描述是历史示例，身份隔离/只读网页限制由本节覆盖。示例 ID/哈希不能当真实记录。
+
+- 传输：`POST /api/command`，JSON `{command,...payload}`；成功 `{ok:true,result:...}`，失败 `{ok:false,error:{code,message,...}}`。CLI `avds <command> --json/--json-file` 使用相同对象，所有业务同时开放给 Agent 和 WebUI，`commands` 列出接口。
+- CLI 从所选 Vault 的 `data/service.json` 发现实际 URL/令牌，用 bearer 本机短连接；浏览器用 HttpOnly/SameSite 会话与精确 Origin。令牌防外站访问，不区分 Agent 与人。
+- 生命周期：`init` 初始化配置/库（已有配置不覆盖）；`doctor` 检查 FTS5/平台能力；`serve` 启动服务；`status/open/stop` 连接现有服务。控制映射为 `service.open/service.stop`，不删锁或按 PID 杀进程。
+- 导入实际参数为 `source_path`（本机普通文件），不是旧 `source_handle`；必填唯一 `operation_id`，可带 `batch_id/source`。网页 `POST /api/import` 传原始文件体，`X-File-Name` 是 URL 编码原名，`X-Batch-Id/X-Operation-Id` 可选；同一 Store 校验暂存。上限 512 MiB/图、100,000,000 像素。
+- `asset.preview/queue.preview` 返回只读语义的 `content_path`、MIME、指纹与详情；网页 `/media?kind=asset|queue&id=...` 复验哈希。这不提供 OS 身份隔离，不保证同用户 Agent 无法改文件；不把“只读语义”当不可写权限证据。
+- `review.list/get/action` 对两入口开放。任何动作需 `confirmed:true` 与非空 `operation_id`；调用者先展示最终内容并按用户明确指令执行。这只是工作流确认。`approve/request_changes/reject` 携带具体 `proposal_id`、整数 `revision`、`proposal_hash`、`target_revision`，资产还需 `file_hash`；修订/指纹错配拒绝。批准在内部提交，不另开放 `approval.record/commit.execute`。
+- `defer_current` 绑定 `queue_item_id`，`defer_remaining_batch` 绑定 `batch_id`，不要求分析或提案，仍需确认与操作 ID；批量批准是逐项绑定的请求。
+- 知识/Prompt 创建、更新、归档通过 `proposal.create/revise`，批准后正式可查；`prompt.render` 只做声明变量替换。`visual.*` 在 Windows 或 helper 不可用时返回 `CAPABILITY_UNAVAILABLE`。
+- 不提供物理删除、反归档、concept.update/merge、任意 SQL 或模板执行。正式/待审隔离、候选先批再修订资产、原图保护继续有效。
+
+按 `review.get` 的实际返回填入审核绑定值，示意：
+
+```json
+{"command":"review.action","operation_id":"review-unique-id","action":"approve","confirmed":true,"proposal_id":"actual-id","revision":1,"proposal_hash":"actual-sha256","file_hash":"actual-file-sha256","target_revision":0}
+```
+
+非资产提案不伪造 file_hash。重试使用同 operation_id / 正文，可跨两个入口重放；审核事件保留首次执行入口名称，不声称验证了用户身份。
+
+## 历史示例与仍有效的数据约束
+
+Schema 是 Draft 2020-12 已实现子集。固定规范化 JSON 使用 UTF-8、键排序、无多余分隔空格，SHA-256 摘要；不声称实现 RFC 8785 全部数值规范。
 
 ## 通用约定与权限
 

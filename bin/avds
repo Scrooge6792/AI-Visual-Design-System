@@ -1,4 +1,6 @@
 #!/bin/sh
 set -eu
-RUNTIME_DIR=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
-PYTHONPATH="$RUNTIME_DIR/src" exec /usr/bin/python3 -m avds.cli "$@"
+PROJECT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+PYTHON_BIN=${AVDS_PYTHON:-python3}
+if [ -x "$PROJECT_DIR/.venv/bin/python" ]; then PYTHON_BIN="$PROJECT_DIR/.venv/bin/python"; fi
+PYTHONPATH="$PROJECT_DIR/src${PYTHONPATH:+:$PYTHONPATH}" exec "$PYTHON_BIN" -m avds.cli "$@"
