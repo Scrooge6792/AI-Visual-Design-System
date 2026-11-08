@@ -9,19 +9,14 @@ import webbrowser
 from http.server import HTTPServer
 
 from . import __version__
+from .commands import REMOTE_COMMAND_DESCRIPTIONS
 from .config import Config, VaultLock
 from .errors import AVDSError
 from .platform import visual_capability
 from .store import Store
 from .web import Handler
 
-COMMANDS = (
-    "status", "import.stage", "queue.get", "queue.preview", "search.pending", "analysis.record",
-    "proposal.create", "proposal.revise", "proposal.get", "candidate.get", "asset.get", "asset.preview",
-    "search.concepts", "search.assets", "search.explain", "search.related", "knowledge.get", "knowledge.search",
-    "prompt.get", "prompt.list", "prompt.render", "visual.index", "visual.search", "search.rebuild",
-    "operations.recover", "review.list", "review.get", "review.action",
-)
+COMMANDS = tuple(REMOTE_COMMAND_DESCRIPTIONS)
 
 
 class Server(HTTPServer):

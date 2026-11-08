@@ -12,7 +12,22 @@ from dataclasses import asdict
 from pathlib import Path
 
 from . import __version__
+from .commands import LOCAL_COMMAND_DESCRIPTIONS, REMOTE_COMMAND_DESCRIPTIONS
 from .config import Config, VaultLock, add_options, default_config_path, load_config
+
+
+def _help_epilog():
+    def section(title, commands):
+        width = max(len(command) for command in commands)
+        lines = [title]
+        lines.extend(f"  {command:<{width}}  {description}" for command, description in commands.items())
+        return "\n".join(lines)
+
+    return "\n\n".join((
+        section("生命周期与发现命令：", LOCAL_COMMAND_DESCRIPTIONS),
+        section("业务命令：", REMOTE_COMMAND_DESCRIPTIONS),
+        "业务命令通过 --json JSON 或 --json-file PATH 接收参数；具体字段见 docs/CONTRACTS.md。",
+    ))
 
 
 def request(config: Config, value: dict):
@@ -52,12 +67,21 @@ def doctor(config):
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(prog="avds", description="本机视觉资料服务与 Agent 客户端")
-    parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
-    parser.add_argument("command", help="init/doctor/serve/status/open/stop 或业务命令")
+    parser = argparse.ArgumentParser(
+        prog="avds",
+        description="启动和操作本机 Visual Design System；Agent 与 WebUI 共用同一服务。",
+        epilog=_help_epilog(),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        add_help=False,
+    )
+    parser._positionals.title = "位置参数"
+    parser._optionals.title = "公共参数"
+    parser.add_argument("-h", "--help", action="help", help="显示全部命令、参数和用途后退出")
+    parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}", help="显示版本号后退出")
+    parser.add_argument("command", help="要执行的命令；完整列表见下方")
     add_options(parser)
-    parser.add_argument("--json", default="{}", help="业务命令的 JSON 对象")
-    parser.add_argument("--json-file", help="从 UTF-8 文件读取业务载荷，适合 PowerShell")
+    parser.add_argument("--json", default="{}", metavar="JSON", help="业务命令的 JSON 对象，默认为 {}")
+    parser.add_argument("--json-file", metavar="PATH", help="从 UTF-8 文件读取业务参数，适合多行内容和 PowerShell")
     args = parser.parse_args(argv)
     try:
         config = load_config(args)

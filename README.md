@@ -6,6 +6,8 @@
 
 2026-11-08 用户确认的新架构覆盖旧版 Unix Socket、独立 Reviewer 和 Touch ID 门禁。审核仍绑定具体提案版本、内容摘要、原图指纹与目标修订，并要求明确确认；**不再声称 Agent 与用户之间存在审批身份隔离**。`confirmed=true` 是工作流确认字段，不是身份凭据。
 
+当前状态：**2.0 初版源码已经开发完成，并通过 macOS 自动化回归与本机 Apple Vision 检查**。尚未完成的发布验收是 Windows 10/11 实机验证，以及浏览器中的人工操作体验验收；因此不能表述为“所有目标平台均已验收完成”。
+
 ## 安装
 
 需要 Python 3.11 或更新稳定版，且其 SQLite 包含 FTS5。运行时只用 Python 标准库和系统原生能力，没有第三方生产依赖、模型 API 或新增订阅。首次建立虚拟环境时，pip 可能需要联网获取 setuptools 构建工具。下面的安装只写当前源码目录的 `.venv` / `.build`，不注册开机服务，不改旧版受信安装或真实 Vault。
@@ -14,9 +16,9 @@ macOS，在取得源码后的项目目录执行：
 
 ```sh
 sh scripts/install.sh
-.venv/bin/avds init --vault "$HOME/Pictures/MyVisualVault"
-.venv/bin/avds doctor
-.venv/bin/avds serve --open
+./avds init --vault "$HOME/Pictures/MyVisualVault"
+./avds doctor
+./avds serve --open
 ```
 
 安装脚本使用 `python3`；需要指定解释器时设置 `AVDS_PYTHON=/完整路径/python3`。Apple Vision helper 会尝试使用已安装的 Xcode Command Line Tools 构建；没有 Swift 编译工具时普通资料管理仍可用。补装系统编译工具后运行 `sh scripts/build.sh` 并重启服务即可自动启用 Vision。不自动安装系统工具。
@@ -31,6 +33,19 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1
 ```
 
 Windows 使用系统 Windows PowerShell / System.Drawing 解码 PNG、JPEG，不使用 Apple Vision。macOS 使用系统图像解码器，支持 PNG、JPEG，以及系统实际可解码的 HEIC/WebP。不要仅改扩展名转换格式；无法解码时返回错误，原文件保留。
+
+### 可选：配置全局 `avds` 命令
+
+安装完成后，协助安装的 Agent **必须先询问用户是否需要配置全局 `avds` 命令**。只有用户明确批准后，才能修改用户环境；拒绝或没有明确答复时，继续使用项目根目录的 `./avds`（Windows 使用 `.\.venv\Scripts\avds.exe`）。
+
+获批后，Agent 应先检测操作系统、当前 shell 和现有 PATH，再采用对应的用户级配置：
+
+- macOS/Linux：优先在已经位于 PATH 的 `~/.local/bin` 中创建指向项目根目录 `avds` 的符号链接；如果该目录不在 PATH，只向当前用户的 shell 配置加入一次，不重复追加。
+- Windows：创建用户级命令包装器，并将其所在目录加入当前用户 PATH；默认不修改系统级 PATH。
+- 不要求管理员权限，不写 `/usr/local/bin` 等系统目录；配置前检查是否存在同名命令，不能静默覆盖。
+- 完成后在新 shell 环境验证 `command -v avds`/`Get-Command avds` 和 `avds --version`。项目被移动或删除后，应重新配置或移除失效入口。
+
+全局命令只是对当前项目入口的便捷引用，不复制 Vault、不启动后台服务，也不改变配置优先级。配置完成后，可在任意目录运行 `avds serve --open`。
 
 `serve` 是唯一长期运行的进程，保持这个终端开启。Agent CLI 每次请求结束即退出；浏览器无需单独启动 WebUI 服务。默认不后台运行、不自动启动。安装脚本不会执行 `init` 或打开真实库。
 
@@ -52,17 +67,20 @@ Windows 使用系统 Windows PowerShell / System.Drawing 解码 PNG、JPEG，不
 
 Windows JSON 路径使用 `C:/Users/yourname/Pictures/VisualVault` 或双反斜杠。优先级：命令行 > `AVDS_VAULT/HOST/PORT/OPEN_BROWSER/VISUAL_PROVIDER` 环境变量 > 配置文件 > 内置默认值。`--config` / `AVDS_CONFIG` 选择配置文件。`host` 仅接受 `127.0.0.1` 或 `localhost`；`port=0` 由系统分配。视觉提供者为 `auto`、`none` 或 `apple-vision`，Windows 中 Apple Vision 始终不可用。
 
-以下 `avds` 指当前虚拟环境中的命令；macOS 也可用 `sh bin/avds`，Windows 可用 `.\.venv\Scripts\avds.exe`。
+以下示例在 macOS 项目根目录使用 `./avds`；Windows 使用 `.\.venv\Scripts\avds.exe`。
 
 ```sh
-avds serve --port 8877 --open
-avds --version
-avds status
-avds open
-avds stop
+./avds serve --port 8877 --open
+./avds --version
+./avds --help
+./avds status
+./avds open
+./avds stop
 ```
 
-最后三项从所选 Vault 的服务记录发现实际端口，只建立短连接。临时更改 Vault 时，其他命令也应传相同 `--vault`。同一 Vault 由操作系统锁限制为一个服务；不同 Vault 可以使用不同端口。端口冲突会报错，不偷偷改端口。服务重启后浏览器会话失效，重新 `avds open`。
+最后三项从所选 Vault 的服务记录发现实际端口，只建立短连接。临时更改 Vault 时，其他命令也应传相同 `--vault`。同一 Vault 由操作系统锁限制为一个服务；不同 Vault 可以使用不同端口。端口冲突会报错，不偷偷改端口。服务重启后浏览器会话失效，重新执行 `./avds open`。
+
+`./avds -h` 与 `./avds --help` 会打印全部生命周期/业务命令、支持的公共参数及每个命令的一句话用途说明；全局命令配置完成后可省略 `./`。
 
 ## Agent 与网页工作流
 
@@ -71,12 +89,12 @@ avds stop
 CLI 统一返回 JSON。含中文、多行内容或 PowerShell 引号复杂时，优先将载荷存为 UTF-8 文件并传 `--json-file`：
 
 ```sh
-avds import.stage --json-file import.json
-avds proposal.create --json-file proposal.json
-avds review.list
-avds review.get --json-file selected-proposal.json
-avds review.action --json-file confirmed-review.json
-avds search.assets --json '{"text":"逆光"}'
+./avds import.stage --json-file import.json
+./avds proposal.create --json-file proposal.json
+./avds review.list
+./avds review.get --json-file selected-proposal.json
+./avds review.action --json-file confirmed-review.json
+./avds search.assets --json '{"text":"逆光"}'
 ```
 
 导入参数使用 `source_path`、唯一 `operation_id` 和可选 `batch_id/source`。提案保存后，先读取展示最终版本再确认审核。审核须提交唯一 `operation_id`、`action`、`confirmed:true`、`proposal_id`、整数 `revision`、`proposal_hash`、`target_revision`，资产还需 `file_hash`。五项绑定来自服务返回，不能猜测；批准动作在同一服务内部提交。新版本必须重新审核；新概念先批准，再修订资产引用。`commands` 列出公开命令，详见 [契约](docs/CONTRACTS.md)。
@@ -87,7 +105,7 @@ avds search.assets --json '{"text":"逆光"}'
 
 所有必要资料位于一个 Vault，内部使用稳定 ID 和相对路径；原图按 SHA-256 寻址，不因拒绝、归档或错误删除。SQLite 使用 DELETE / FULL / 外键 / 5000ms busy timeout。文件复制与数据库事务是分开的，保留幂等操作与恢复记录。Windows 提供文件 fsync 和同卷替换，Python 标准接口不能同步目录句柄，不能声称与 macOS 目录 fsync 完全等价。
 
-备份时完成当前操作并 `avds stop`，确认服务终端已退出，再通过 Finder / 文件资源管理器复制或压缩**整个 Vault**。不要只复制数据库，也不要运行中复制。恢复时将配置指向新目录；服务记录是临时状态，重新启动会更新。不提供在线快照、复杂容灾或自动备份。
+备份时完成当前操作并执行 `./avds stop`，确认服务终端已退出，再通过 Finder / 文件资源管理器复制或压缩**整个 Vault**。不要只复制数据库，也不要运行中复制。恢复时将配置指向新目录；服务记录是临时状态，重新启动会更新。不提供在线快照、复杂容灾或自动备份。
 
 不提供物理删除、反归档、概念更新/合并、复合原子批准、任意模板代码、云服务或跨用户数据交换。现有 Agent 账号的分析能力和额度由用户环境决定，耗尽时可以保存稍后；不会自动调用付费 API。
 
@@ -95,6 +113,6 @@ avds search.assets --json '{"text":"逆光"}'
 
 ## 项目文件
 
-[需求](docs/REQUIREMENTS.md) · [架构](ARCHITECTURE.md) · [决策](DECISIONS.md) · [实施](IMPLEMENTATION.md) · [接口契约](docs/CONTRACTS.md) · [进度](docs/PROGRESS.md) · [来源覆盖](docs/SOURCE-COVERAGE.md)
+[需求](docs/REQUIREMENTS.md) · [架构](ARCHITECTURE.md) · [决策](DECISIONS.md) · [实施](IMPLEMENTATION.md) · [接口契约](docs/CONTRACTS.md) · [进度](docs/PROGRESS.md) · [来源覆盖](docs/SOURCE-COVERAGE.md) · [历史资料说明](docs/history/README.md)
 
 必要回归：`PYTHONPATH=src python3 -m unittest discover -s tests -v`。Windows PowerShell 使用 `$env:PYTHONPATH='src'; py -3 -m unittest discover -s tests -v`。测试只创建临时资料；有原生 Vision 才运行真实视觉比较。

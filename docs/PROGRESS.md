@@ -2,23 +2,41 @@
 
 更新：2026-11-08。
 
-## 当前交付：2.0.0 跨平台单服务源码
+## 结论
 
-- 授权：Python；一个长期运行本机 HTTP 服务；Agent / WebUI 完整入口；取消 Touch ID 和独立 Reviewer 身份门禁；macOS 自动可选 Vision，Windows 不使用；公开源码分发准备，不做数据同步或交流。
-- 完成：配置（命令行 > 环境变量 > JSON）、Vault 操作系统锁、统一 init/doctor/serve/status/open/stop、HTTP 业务路由、CLI 短连接、同源会话/令牌/Host/CSP 防护、浏览器图片上传、提案表单/修订、最终内容预览与审核、全部公开操作界面。
-- 完成：Windows 原生 PNG/JPEG 解码适配；macOS 图像解码 / Apple Vision 适配；平台能力探测；移除运行链路的 Unix Socket、libproc、Touch ID、launchd 和 Unix chmod 硬依赖。无新增第三方生产依赖。
-- 正确性修复：旧 autocommit 连接中的 `with db` 没有显式开始事务；现使用 BEGIN IMMEDIATE，提交异常回滚审核/正式记录。新增失败注入检查。
-- 修订修复：资产、知识/Prompt 与概念修订均保持原操作和目标身份；Schema 校验失败不会使旧版本失效。浏览器重复上传以稳定内部路径重放相同 operation_id，不因临时文件名变化而冲突。本机 HTTP 启动不做反向 DNS 查询。
-- 保留：版本与哈希绑定、原图保护、持久稍后、正式索引隔离、知识/Prompt 审核与渲染、候选概念顺序提交、幂等与恢复、DELETE/FULL。
-- 必要检查：20 个 Python 测试在 macOS 临时 Vault 全部通过，包含 HTTP 单服务/双入口审核、同源与 Host 拒绝、浏览器上传及幂等重放、提案修订目标锁定、配置优先级、Windows 适配模拟和实际 Apple Vision 比较。受限环境不能监听端口，HTTP/实际 Vision 检查在获准的本机测试进程运行。
-- 限制：没有 Windows 实机，不能宣称 Windows 10/11 实际运行已验证。Windows 只支持系统可解码的 PNG/JPEG，不提供 Vision；Windows 不提供目录 fsync 的等价保证。新界面产品体验由用户验收。
-- 静态检查：Python、前端 JavaScript、shell 语法和 git diff --check 通过。Playwright CLI 未在当前环境缓存，受限网络无法拉取；未执行真实浏览器点击流程，不将 HTTP 测试冒充浏览器验收。
-- 生命周期冒烟：在独立临时目录实际运行 CLI init → doctor → serve → status → stop，全部成功；服务正常退出，运行状态文件已清理。
-- 安装检查：`sh scripts/install.sh` 已在项目内创建隔离 `.venv`、完成 editable 安装并构建 Apple Vision helper；没有写入旧运行目录或真实 Vault。首次获取 setuptools 构建工具需要网络，运行时没有第三方生产依赖。
-- 版本说明：Python 包、模块、CLI、服务状态与主文档统一为应用 2.0.0；JSON 接口契约独立保持 1.0，V0.8/V1 标记为历史来源和旧实现规格。
-- 未执行：没有安装或更新旧受信运行目录、Reviewer App 或真实 Vault；没有停止旧运行实例；没有创建/发布 GitHub 仓库或做真实素材迁移。
-- 下一步：用户按 README 在独立的新 Vault 试用；Windows 用户环境完成实际安装/原生解码验证后再记录结果；真实库升级需要用户单独授权。
+**2.0.0 初版源码开发完成。** macOS 单服务闭环、安装、生命周期和实际 Apple Vision 已验证；但 Windows 10/11 实机与真实浏览器产品体验尚未完成，因此不能称为“跨平台公开发布已全部验收”。
 
-## 历史
+## 已完成
 
-2026-11-07 的 V1 / Phase 0～3 及后续 Phase 4～6 曾使用受信 Core、独立 Reviewer、Touch ID 与只读 WebUI，已有安装和测试记录见 PHASE0.md。该审批与部署结构已由本次明确决策覆盖，旧结果不证明新版跨平台能力。来源材料继续保留；不再恢复“仅文档、尚未开发”的旧状态。
+- Python 单一长期 HTTP 服务，一次启动；CLI 为短连接客户端，WebUI 由同一服务提供。
+- Agent/WebUI 完整导入、分析记录、提案/修订、审核、拒绝/退回、两种稍后、检索、知识和 Prompt。
+- 配置优先级、可配置端口/Vault、服务发现、同 Vault 操作系统锁、随机会话、Host/Origin/CSP。
+- SQLite DELETE/FULL/外键/busy timeout、显式事务、幂等、恢复、正式/待审索引隔离。
+- 资产/知识/Prompt/概念修订目标锁定；上传响应丢失后的相同 operation_id 重放。
+- macOS 系统图像解码与可选自动 Apple Vision；Windows PNG/JPEG 原生适配及无 Vision 能力说明。
+- macOS `install.sh`、Windows `install.ps1`、应用版本 2.0.0、契约版本 1.0。
+- macOS 项目根目录提供 `./avds` 命令入口，不再要求记忆 `.venv/bin/avds` 路径。
+- 安装说明要求 Agent 先询问是否配置全局 `avds`；获批后仅按系统配置用户级命令目录/PATH，并验证命令，不默认修改系统级 PATH。
+- `avds -h` / `avds --help` 提供完整命令、公共参数和逐项一句话用途说明，服务端与 CLI 共用命令目录以防漂移。
+
+## 必要检查
+
+- 22 项 Python 测试通过：CLI 帮助、HTTP 单服务、双入口审核、上传重放、提案绑定、事务失败回滚、索引隔离、配置、Windows 适配模拟和真实 Apple Vision。
+- init → doctor → serve → status → stop 临时 Vault 生命周期通过。
+- 项目内 `.venv` editable 安装与 Vision helper 构建通过。
+- Python、JavaScript、shell 语法和 `git diff --check` 通过。
+
+## 本轮目录清理
+
+- 当前规范只保留 2.0.0 有效内容；V0.8/V1 材料集中到 `docs/history/v1/`。
+- 删除不再参与运行或构建的 Reviewer App 源码、Phase 0 探针、launchd 生成器、旧 Core/Reviewer/Web 启动包装器和 start/stop 脚本。
+- 清理可重建的旧 Reviewer/Phase 0 构建产物、旧页面快照、Python 缓存和 egg-info；保留并重建当前 Apple Vision helper。
+
+## 限制与下一步
+
+- Windows 10/11 尚未实机验证；只能称为目标支持，不能称为已通过。
+- WebUI 真实浏览器点击和视觉体验由用户验收；HTTP 行为测试不等同产品体验。
+- 旧受信安装、Reviewer App 和真实 Vault 未更新、停止或迁移。
+- 公开 GitHub 仓库尚未创建；许可证也尚未选择。
+
+下一步优先级：Windows 实机安装/导入闭环 → 用户浏览器体验 → 用户授权后评估旧 Vault 迁移 → 准备 GitHub 发布。

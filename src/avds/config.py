@@ -59,13 +59,14 @@ def load_config(args=None) -> Config:
 
 
 def add_options(parser):
-    parser.add_argument("--config")
-    parser.add_argument("--vault")
-    parser.add_argument("--host")
-    parser.add_argument("--port", type=int)
-    parser.add_argument("--visual-provider", choices=["auto", "none", "apple-vision"])
-    parser.add_argument("--open-browser", "--open", dest="open_browser", action="store_true", default=None)
-    parser.add_argument("--no-open-browser", dest="open_browser", action="store_false")
+    parser.add_argument("--config", metavar="PATH", help="使用指定 JSON 配置文件")
+    parser.add_argument("--vault", metavar="PATH", help="覆盖当前 Vault 路径")
+    parser.add_argument("--host", metavar="HOST", help="本机监听地址：127.0.0.1 或 localhost")
+    parser.add_argument("--port", type=int, metavar="PORT", help="覆盖本机服务端口，0 表示自动分配")
+    parser.add_argument("--visual-provider", choices=["auto", "none", "apple-vision"], help="选择本机视觉提供者")
+    parser.add_argument("--open-browser", "--open", dest="open_browser", action="store_true", default=None,
+        help="服务启动后打开 WebUI")
+    parser.add_argument("--no-open-browser", dest="open_browser", action="store_false", help="服务启动后不打开浏览器")
 
 
 class VaultLock:
