@@ -1,5 +1,7 @@
 # 系统架构与实施约束
 
+> 本文解释系统边界、运行组件与关键数据流；源码目录及各模块的设计意图见 [MODULES.md](MODULES.md)。架构图的可编辑源文件为 [diagrams/architecture.excalidraw](diagrams/architecture.excalidraw)。
+
 当前版本：**1.0.0**。本文件只描述当前有效架构；旧版 Reviewer、Touch ID、Unix Socket 与分阶段方案已归档到 `docs/history/v1/`，不再约束当前实现。
 
 ## 总体架构

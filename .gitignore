@@ -7,3 +7,16 @@ __pycache__/
 *.egg-info/
 dist/
 build/
+
+# User-specific AVDS configuration and local runtime data
+.avds/
+.env
+.env.*
+!.env.example
+config.local.json
+*.avds.local.json
+avds.local.json
+.vault/
+vault.local/
+VisualAssetVault/
+VisualVault/

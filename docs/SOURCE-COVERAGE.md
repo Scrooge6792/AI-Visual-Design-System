@@ -6,7 +6,7 @@
 | --- | --- | --- |
 | 1 | 用户当前明确要求 | 最高优先，覆盖所有旧决定 |
 | 2 | AGENTS.md | 项目执行边界与不可自行改变的约束 |
-| 3 | README、REQUIREMENTS、ARCHITECTURE、DECISIONS、IMPLEMENTATION、CONTRACTS、PROGRESS | 1.0.0 当前产品、实现和状态 |
+| 3 | README、INSTALL、TODO、REQUIREMENTS、ARCHITECTURE、MODULES、DECISIONS、DEVELOPMENT、CONTRACTS、PROGRESS | 1.0.0 当前产品、实现、安装、待办和状态 |
 | 4 | `src/`、`tests/`、`pyproject.toml`、`scripts/` | 实际行为与可验证证据 |
 | 5 | `docs/history/v1/` | 仅用于追溯，不是当前规格 |
 

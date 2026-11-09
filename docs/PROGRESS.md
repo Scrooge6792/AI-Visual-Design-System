@@ -33,14 +33,14 @@
 - 删除不再参与运行或构建的 Reviewer App 源码、Phase 0 探针、launchd 生成器、旧 Core/Reviewer/Web 启动包装器和 start/stop 脚本。
 - 清理可重建的旧 Reviewer/Phase 0 构建产物、旧页面快照、Python 缓存和 egg-info；保留并重建当前 Apple Vision helper。
 
-## 限制与下一步
+## 当前限制
 
 - Windows 10/11 尚未实机验证；只能称为目标支持，不能称为已通过。
 - WebUI 真实浏览器点击和视觉体验由用户验收；HTTP 行为测试不等同产品体验。
 - 旧受信安装、Reviewer App 和真实 Vault 未更新、停止或迁移。
 - 公开 GitHub 仓库已创建：<https://github.com/Scrooge6792/AI-Visual-Design-System>；许可证尚未选择。
 
-下一步优先级：Windows 实机安装/导入闭环 → 用户浏览器体验 → 用户授权后评估旧 Vault 迁移。
+后续行动及优先级统一见根目录 [`TODO.md`](../TODO.md)。
 
 ## 2026-11-09 · GitHub 源码分发
 
@@ -49,3 +49,12 @@
 - 必要检查：工作区原先干净；核对跟踪文件和历史对象，未包含 Vault、素材或运行配置，常见密钥格式检查未发现匹配；文档变更使用 `git diff --check` 检查。
 - 本轮只涉及仓库分发与说明，不改变运行行为，不重复运行产品测试；Windows 实机和浏览器人工验收仍未完成。
 - 未选择法律许可，未更新安装、迁移真实数据或创建版本发布包。下一步仍为现有产品验收。
+
+## 2026-11-09 · 文档职责整理
+
+- 根目录 README 调整为面向使用者的项目入口，保留有序安装流程和可直接复制给 Agent 的安装 Prompt。
+- 新增根目录 `INSTALL.md` 和 `TODO.md`，分别作为 Agent 安装操作手册和唯一未完成事项清单；删除重复的 `START-HERE.md`。
+- 当前架构、决策和开发文档统一移入 `docs/`，新增文档索引及模块设计意图说明。
+- 使用 Excalidraw 绘制架构图，同时保存可编辑源文件与 README 引用的 SVG 导出图。
+- 精简并重组 `AGENTS.md`，加入文件职责、架构图维护和用户级文件忽略规则；`.gitignore` 补充用户配置及常见本机 Vault 目录。
+- 本轮只调整文档与图，不改变运行行为；检查范围为链接、Markdown、Excalidraw 导出和 `git diff --check`，不重复运行产品测试。

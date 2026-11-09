@@ -1,4 +1,4 @@
-# 1.0.0 实施与维护计划
+# 1.0.0 开发与维护说明
 
 ## 当前状态
 
@@ -49,7 +49,9 @@ git diff --check
 - 稍后持久化、候选概念依赖、知识/Prompt 渲染。
 - Windows 平台适配不得调用 Apple 工具；macOS 可用时运行真实 Vision 比较。
 
-## 发布前剩余验收
+## 发布验收方法
+
+尚未完成的验收项以根目录 [`TODO.md`](../TODO.md) 为准；本节只定义执行这些验收时采用的方法，不维护第二份待办状态。
 
 ### Windows 实机
 
@@ -73,7 +75,7 @@ git diff --check
 
 ## 后续维护规则
 
-- 每次改变行为、范围或平台支持时同步 README、AGENTS、REQUIREMENTS、ARCHITECTURE、DECISIONS、CONTRACTS 和 PROGRESS。
-- 每阶段只记录完成项、必要检查、限制、下一步和新增决定。
+- 每次改变行为、范围或平台支持时同步对应权威文档；用户可见变化更新 README，安装变化更新 INSTALL，结构变化更新 ARCHITECTURE/MODULES，未完成项更新 TODO，完成证据更新 PROGRESS。
+- 每阶段在 PROGRESS 记录完成项、必要检查、限制和新增决定；未完成行动只写入 TODO。
 - 不把 macOS 测试、平台模拟或 HTTP 测试写成 Windows/浏览器实机通过。
 - 历史资料仅用于追溯，不从中恢复已被 1.0.0 覆盖的 Reviewer、Touch ID、Unix Socket 或只读 WebUI。
